@@ -63,6 +63,11 @@ def _bucketing_count(db, frequent_items, min_support):
             yield frozenset(inv_map(i) for i, b in enumerate(reversed(bin(tid))) if b == '1'), count
 
 
+# Replace above bucketing count with the one from C module
+from _fpgrowth import bucketing_count as _bucketing_count, \
+                      BUCKETING_FEW_ITEMS as _BUCKETING_FEW_ITEMS
+
+
 def _fp_tree_insert(item, T, node_links, count):
     """ Insert item into Node-tree T and return the new node """
     node = T.get(item)
@@ -112,7 +117,8 @@ def _fp_tree(db, min_support):
         item = frequent_items.pop()
         return None, ((frozenset({item}), item_support[item]),)
     if n_items <= _BUCKETING_FEW_ITEMS:
-        return None, _bucketing_count(db, frequent_items, min_support)
+        return None, ((frozenset(itemset), support)
+                      for itemset, support in _bucketing_count(db, frequent_items, min_support))
 
     # "The items [...] should be ordered in the frequency descending order of
     # node occurrence of each item instead of its support" ([1], p. 12, bottom)
