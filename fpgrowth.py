@@ -15,44 +15,16 @@ The entry point is frequent_itemsets() function below.
      http://www.cs.tau.ac.il/~fiat/dmsem03/Depth%20First%20Generation%20of%20Long%20Patterns%20-%202000.pdf
 
 """
-from collections import defaultdict, OrderedDict
-from itertools import combinations, chain, tee
+from collections import defaultdict, Iterator
+from itertools import combinations, chain
 from functools import reduce
 
 import numpy as np
 from scipy.sparse import issparse, spmatrix
 
 
-import sys, ipdb
-
-def uncaught_excepthook(*args):
-    sys.__excepthook__(*args)
-    from pprint import pprint
-    from types import BuiltinFunctionType, ModuleType
-    tb = sys.last_traceback
-    prev_tb = None
-    while tb.tb_next: tb = tb.tb_next
-    print('\nDumping locals() ...')
-    pprint({k:v for k,v in tb.tb_frame.f_locals.items()
-                if not k.startswith('_') and
-                   not isinstance(v, (BuiltinFunctionType,
-                                      type, ModuleType))})
-    if sys.stdin.isatty() and (sys.stdout.isatty() or sys.stderr.isatty()):
-        try:
-            import ipdb as pdb  # try to import the IPython debugger
-        except ImportError:
-            import pdb as pdb
-        print('\nStarting interactive debug prompt ...')
-        pdb.pm()
-
-    sys.exit(1)
-
-
-""" TODO try sorting transactions in db length-ascending """
-
-
-
-
+_FP_TREE_EMPTY = (None, [])
+_BUCKETING_FEW_ITEMS = 10
 
 
 class Node(dict):
@@ -60,46 +32,6 @@ class Node(dict):
         self.item = item
         self.parent = parent
         self.count = count
-
-    #~ def __repr__(self):
-        #~ return '{}|{}'.format(self.count, super().__repr__())
-
-    def __hash__(self): return id(self)
-
-
-class NodeLinks(OrderedDict):
-    def __missing__(self, key):
-        value = self[key] = []
-        return value
-
-def __fp_tree_count_nodes(tree):
-    count = 1 if tree.item is not None else 0
-    for t in tree.values():
-        count += __fp_tree_count_nodes(t)
-    return count
-
-def __fp_tree_max_height(tree):
-    if tree:
-        return max((1 if tree.item is not None else 0) +
-                   __fp_tree_max_height(child) for child in tree.values())
-    return 1 if tree.item is not None else 0
-
-def __fp_tree_has_node(tree, node):
-    if tree is node: return True
-    return any(__fp_tree_has_node(child, node) for child in tree.values())
-
-def __fp_tree_to_list(tree):
-    lst = [tree] if tree.item is not None else []
-    for child in tree.values():
-        lst += __fp_tree_to_list(child)
-    return lst
-
-
-
-
-
-_FP_TREE_EMPTY = (None, [])
-_BUCKETING_FEW_ITEMS = 10
 
 
 def _bucketing_count(db, frequent_items, min_support):
@@ -110,26 +42,25 @@ def _bucketing_count(db, frequent_items, min_support):
     # Forward and inverse mapping of frequent_items to [0, n_items)
     inv_map = dict(enumerate(frequent_items)).__getitem__
     fwd_map = {v: k for k, v in inv_map.__self__.items()}.__getitem__
-
+    # Project transactions
     k = len(frequent_items)
     buckets = [0] * 2**k
     for count, transaction in db:
         set_bits = (fwd_map(i) for i in frequent_items.intersection(transaction))
         tid = reduce(lambda a, b: a | 1 << b, set_bits, 0)
         buckets[tid] += count
-
     # Aggregate bucketing counts ([2], Figure 5)
     for i in range(0, k):
         i = 2**i
         for j in range(2**k):
             if j & i == 0:
                 buckets[j] += buckets[j + i]
-
+    # Announce results
     buckets = enumerate(buckets)
     next(buckets)  # Skip 000...0
     for tid, count in buckets:
         if count >= min_support:
-            yield {inv_map(i) for i, b in enumerate(reversed(bin(tid))) if b == '1'}, count
+            yield frozenset(inv_map(i) for i, b in enumerate(reversed(bin(tid))) if b == '1'), count
 
 
 def _fp_tree_insert(item, T, node_links, count):
@@ -179,7 +110,7 @@ def _fp_tree(db, min_support):
         return _FP_TREE_EMPTY
     if 1 == n_items:
         item = frequent_items.pop()
-        return None, [(frozenset({item}), item_support[item])]
+        return None, ((frozenset({item}), item_support[item]),)
     if n_items <= _BUCKETING_FEW_ITEMS:
         return None, _bucketing_count(db, frequent_items, min_support)
 
@@ -272,149 +203,108 @@ def _fp_growth(tree, alpha, min_support):
 
 
 def frequent_itemsets(X, min_support=.2):
-    if not isinstance(X, (np.ndarray, spmatrix, list)):
-        raise TypeError('X must be (sparse) array of boolean values or list of lists of hashable items')
-    if not (0 < min_support < 1):
-        raise ValueError('min_support must be a percent fraction')
+    """
+    Generator yielding frequent itemsets from database X.
+
+    Parameters
+    ----------
+    X : list or numpy.ndarray or scipy.sparse.spmatrix or iterator
+        The database of transactions where each transaction is a collection
+        of integer items. If numpy.ndarray, the items are considered to be
+        indexes of non-zero columns.
+    min_support : float
+        Percent of minimal support for itemset to be considered frequent.
+    """
+    if not isinstance(X, (np.ndarray, spmatrix, list, Iterator)):
+        raise TypeError('X must be (sparse) array of boolean values, or list of lists of hashable items, or iterator')
+    if not 0 < min_support < 1:
+        raise ValueError('min_support must be a percent fraction in [0, 1]')
 
     min_support *= len(X) if isinstance(X, list) else X.shape[0]
     min_support = max(1, int(min_support))
-    print('MIN SUPPORT IS', min_support)
 
     if issparse(X):
         X = X.tolil().rows
-    elif not isinstance(X, list):
+    elif isinstance(X, np.ndarray):
         X = (t.nonzero()[0] for t in X)
 
-    db = ((1, transaction) for transaction in X)  # 1 == initial item support
+    db = ((1, transaction) for transaction in X)  # 1 is initial item support
     tree, itemsets = _fp_tree(db, min_support)
-    if tree is not None:
-        print(__fp_tree_count_nodes(tree), __fp_tree_max_height(tree), tree)
-        #~ print('tree', tree)
-        itemsets = list(_fp_growth(tree, frozenset(), min_support))
-        #~ print(len(itemsets), itemsets)
-    elif itemsets:
-        itemsets = list(itemsets)
-
-    print(len(itemsets))
-    print(len({frozenset(i[0]) for i in itemsets}))
-
-    #~ seen = defaultdict(int)
-    #~ for items, support in sorted(itemsets):#, key=lambda i: (i[1], i[0])):
-        #~ frozen = frozenset(items)
-        #~ if frozen in seen:
-            #~ if support != seen[frozen]:
-            #~ print('{:4} {:4}'.format(seen[frozen], support), items)
-        #~ seen[frozen] = support
-    return itemsets
+    #~ if tree is not None:
+        #~ print(__fp_tree_count_nodes(tree), __fp_tree_max_height(tree), tree)
+    yield from (itemsets or _fp_growth(tree, frozenset(), min_support))
 
 
-class OneHotEncoder:
+def __fp_tree_count_nodes(tree):
+    count = 1 if tree.item is not None else 0
+    for t in tree.values():
+        count += __fp_tree_count_nodes(t)
+    return count
+
+
+def __fp_tree_max_height(tree):
+    if tree:
+        return max((1 if tree.item is not None else 0) +
+                   __fp_tree_max_height(child) for child in tree.values())
+    return 1 if tree.item is not None else 0
+
+
+class OneHot:
+    """
+    Encode discrete Orange.data.Table into a 2D array of binary attributes.
+    """
     @staticmethod
     def encode(table):
         encoded, mapping = [], {}
-        #~ ipdb.set_trace()
         for i, var in enumerate(table.domain.attributes):
             if not var.is_discrete: continue
             for j, val in enumerate(var.values):
                 mapping[len(encoded)] = i, j
                 encoded.append(table.X[:, i] == j)
-        #~ print(encoded)
         return np.column_stack(encoded), mapping
 
     @staticmethod
-    def decode(table, mapping):
-        ...
-
+    def decode(itemset, table, mapping):
+        """Yield sorted (item, variable, value) tuples (one for each item)"""
+        attributes = table.domain.attributes
+        for item in itemset:
+            ivar, ival = mapping[item]
+            var = attributes[ivar]
+            yield item, var, var.values[ival]
 
 
 def preprocess(table):
-    #~ from sklearn.preprocessing import OneHotEncoder
-    #~ categorical = [v.is_discrete for v in table.domain.attributes]
-    #~ n_values = [len(v.values) for v in table.domain.attributes]
-    #~ enc = OneHotEncoder(
-        #~ n_values=n_values,
-        #~ sparse=False,
-        #~ categorical_features=categorical,
-        #~ handle_unknown='ignore')
     if table.domain.has_continuous_attributes():
-        raise ValueError('Frequent itemsets require discrete variables')
-    encoded, mapping = OneHotEncoder.encode(table)
-    #~ print(encoded)
+        raise ValueError('Frequent itemsets require all variables to be discrete')
+    encoded, mapping = OneHot.encode(table)
     return encoded
 
 
 if __name__ == '__main__':
-    #~ sys.excepthook = uncaught_excepthook
-    """ Only works if cythonized with --embed """
-    # Example from [1] § 2.2, Figure 3.
-    #~ X = np.array([[0, 1, 0, 1, 1, 0],
-                  #~ [0, 0, 1, 1, 0, 1],
-                  #~ [0, 1, 1, 1, 0, 1],
-                  #~ [0, 0, 1, 0, 0, 1]])
-    np.random.seed([0])
-    X = np.random.random((50, 15)) > .5
-    #~ X = np.array([
-         #~ [0, 0, 1, 1, 1, 0, 0, 0, 1, 1],
-         #~ [1, 1, 1, 0, 1, 0, 0, 0, 0, 1],
-         #~ [0, 1, 1, 0, 1, 1, 1, 1, 0, 0],
-         #~ [1, 1, 1, 0, 0, 0, 0, 1, 1, 0]
-    #~ ])
-
+    #~ np.random.seed([0])
+    #~ X = np.random.random((1000, 50)) > .5
     from Orange.data import Table
     from Orange.preprocess import Discretize
     table = Table('voting')
     table = Discretize()(table)
-#~
-    #~ X = [
-        #~ list('5013'),
-        #~ list('5023'),
-        #~ list('50123'),
-        #~ list('5012'),
-        #~ list('502'),
-        #~ list('502'),
-        #~ list('501'),
-        #~ list('54'),
-    #~ ]
-    #~ X = [
-        #~ list('502'),
-        #~ list('501'),
-        #~ list('54'),
-        #~ list('50123'),
-        #~ list('5013'),
-        #~ list('502'),
-        #~ list('5023'),
-        #~ list('5012'),
-    #~ ]
-    #~ print(X)
-
     X = preprocess(table)
 
     import time
     start = time.clock()
-    itemsets = frequent_itemsets(X, .1)
-    print(time.clock() - start)
+    itemsets = list(frequent_itemsets(X, .1))
+    print('time', time.clock() - start)
 
-    #~ for itemset in itemsets:
-        #~ print(itemset)
+    print(len(itemsets))
+    print(len(set(itemsets)))
 
-
-    #~ X = np.ones((10, 10))
-    #~ itemsets = frequent_itemsets(X, .1)
-#~
-    #~ X = np.array([
-        #~ list(map(int, list('1111100000'))),
-        #~ list(map(int, list('0000011111'))),
-        #~ list(map(int, list('1100011000'))),
-        #~ list(map(int, list('1000010000'))),
-        #~ list(map(int, list('0100001000'))),
-    #~ ]).T
-    #~ assert len(frequent_itemsets(X, .01)) == 17
-
+    if len(itemsets) < 100:
+        print()
+        for itemset in itemsets:
+            print(itemset)
 
     # Test that all itemsets indeed have the calculated support
-    #~ for itemset, support in itemsets:
-        #~ x = X[:, list(itemset)]
-        #~ s = x[x.sum(1) >= len(itemset)].sum(0)
-        #~ u = np.unique(s)
-        #~ assert len(u) == 1 and u[0] == support, (support, s, itemset)
+    for itemset, support in itemsets:
+        x = X[:, list(itemset)]
+        s = x[x.sum(1) >= len(itemset)].sum(0)
+        u = np.unique(s)
+        assert len(u) == 1 and u[0] == support, (support, s, itemset)
