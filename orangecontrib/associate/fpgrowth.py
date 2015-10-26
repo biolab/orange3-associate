@@ -15,6 +15,9 @@ The entry point is frequent_itemsets() function below.
      http://www.cs.tau.ac.il/~fiat/dmsem03/Depth%20First%20Generation%20of%20Long%20Patterns%20-%202000.pdf
 
 """
+
+# TODO: Consider FPClose from "Efficiently using prefix-trees in mining frequent itemsets"
+
 from collections import defaultdict, Iterator
 from itertools import combinations, chain
 from functools import reduce
@@ -27,7 +30,7 @@ _FP_TREE_EMPTY = (None, [])
 _BUCKETING_FEW_ITEMS = 10
 
 
-class Node(dict):
+class _Node(dict):
     def __init__(self, item=None, parent=None, count=None):
         self.item = item
         self.parent = parent
@@ -69,10 +72,10 @@ from orangecontrib.associate._fpgrowth import bucketing_count as _bucketing_coun
 
 
 def _fp_tree_insert(item, T, node_links, count):
-    """ Insert item into Node-tree T and return the new node """
+    """ Insert item into _Node-tree T and return the new node """
     node = T.get(item)
     if node is None:
-        node = T[item] = Node(item, T, count)
+        node = T[item] = _Node(item, T, count)
         node_links[item].append(node)
     else:  # Node for this item already in T, just inc its count
         node.count += count
@@ -132,7 +135,7 @@ def _fp_tree(db, min_support):
                          key=sort_index))
           for count, transaction in db)
 
-    root = Node()
+    root = _Node()
     node_links = root.node_links = defaultdict(list)
     for count, transaction in db:
         T = root
@@ -261,12 +264,16 @@ class OneHot:
     """
     @staticmethod
     def encode(table):
-        encoded, mapping = [], {}
+        """
+        Return a tuple of
+        (bool (one hot) ndarray, {col: (variable_index, value_index)} mapping)
+        """
+        X, encoded, mapping = table.X, [], {}
         for i, var in enumerate(table.domain.attributes):
             if not var.is_discrete: continue
             for j, val in enumerate(var.values):
                 mapping[len(encoded)] = i, j
-                encoded.append(table.X[:, i] == j)
+                encoded.append(X[:, i] == j)
         return np.column_stack(encoded), mapping
 
     @staticmethod
