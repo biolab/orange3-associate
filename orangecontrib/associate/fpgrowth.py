@@ -64,8 +64,8 @@ def _bucketing_count(db, frequent_items, min_support):
 
 
 # Replace above bucketing count with the one from C module
-from _fpgrowth import bucketing_count as _bucketing_count, \
-                      BUCKETING_FEW_ITEMS as _BUCKETING_FEW_ITEMS
+from orangecontrib.associate._fpgrowth import bucketing_count as _bucketing_count, \
+                                              BUCKETING_FEW_ITEMS as _BUCKETING_FEW_ITEMS
 
 
 def _fp_tree_insert(item, T, node_links, count):
