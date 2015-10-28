@@ -98,17 +98,42 @@ class OWItemsets(widget.OWWidget):
         instances = set()
         where = np.where
 
+        def whole_subtree(node):
+            yield node
+            for i in range(node.childCount()):
+                yield from whole_subtree(node.child(i))
+
         def itemset(node):
             while node:
                 yield node.data(0, self.ITEM_DATA_ROLE)
                 node = node.parent()
 
+        def selection_ranges(node):
+            n_children = node.childCount()
+            if n_children:
+                yield (self.tree.indexFromItem(node.child(0)),
+                       self.tree.indexFromItem(node.child(n_children - 1)))
+            for i in range(n_children):
+                yield from selection_ranges(node.child(i))
+
+        nSelectedItemsets = 0
+        item_selection = QItemSelection()
         for node in self.tree.selectedItems():
-            cols, vals = zip(*(mapping[i] for i in itemset(node)))
-            instances.update(where((X[:, cols] == vals).all(axis=1))[0])
+            nodes = (node,) if node.isExpanded() else whole_subtree(node)
+            if not node.isExpanded():
+                for srange in selection_ranges(node):
+                    item_selection.select(*srange)
+            for node in nodes:
+                nSelectedItemsets += 1
+                cols, vals = zip(*(mapping[i] for i in itemset(node)))
+                instances.update(where((X[:, cols] == vals).all(axis=1))[0])
+        self.tree.itemSelectionChanged.disconnect(self.selectionChanged)
+        self.tree.selectionModel().select(item_selection,
+                                          QItemSelectionModel.Select | QItemSelectionModel.Rows)
+        self.tree.itemSelectionChanged.connect(self.selectionChanged)
 
         self.nSelectedExamples = len(instances)
-        self.nSelectedItemsets = len(self.tree.selectedItems())
+        self.nSelectedItemsets = nSelectedItemsets
         self.output = self.data[sorted(instances)] or None
         self.commit()
 
