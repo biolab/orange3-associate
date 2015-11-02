@@ -141,11 +141,13 @@ def _fp_tree(db, min_support):
           for count, transaction in db)
 
     root = _Node()
-    node_links = root.node_links = defaultdict(list)
+    node_links = defaultdict(list)
     for count, transaction in db:
         T = root
         for item in transaction:
             T = _fp_tree_insert(item, T, node_links, count)
+    # Sorted support-descending (in reverse because popping from the back for efficiency)
+    root.node_links = sorted(node_links.items(), key=lambda i: -sort_index(i[0]))
     return root, None
 
 
@@ -166,14 +168,14 @@ def _single_prefix_path(root):
     while len(tree) == 1:
         tree = next(iter(tree.values()))
         path.append((tree.item, tree.count))
-        del node_links[tree.item]
+        node_links.pop()
     tree.parent, tree.item, tree.node_links = None, None, node_links
     return path, tree
 
 
-def _prefix_paths(tree, item):
+def _prefix_paths(tree, nodes):
     """ Generate all paths of tree leading to all item nodes """
-    for node in tree.node_links[item]:
+    for node in nodes:
         path = []
         support = node.count
         node = node.parent
@@ -192,11 +194,11 @@ def _freq_patterns_single(P, alpha, min_support):
 
 def _freq_patterns_multi(Q, alpha, min_support):
     """ Mine multi-path FP-tree """
-    for item, nodes in Q.node_links.items():
+    for item, nodes in reversed(Q.node_links):
         support = sum(n.count for n in nodes)
         beta = alpha.union({item})
         yield beta, support
-        tree, got_itemsets = _fp_tree(_prefix_paths(Q, item), min_support)
+        tree, got_itemsets = _fp_tree(_prefix_paths(Q, nodes), min_support)
         if got_itemsets:
             for itemset, support in got_itemsets:
                 yield beta.union(itemset), support
