@@ -88,11 +88,23 @@ class OWAssociate(widget.OWWidget):
         b = gui.auto_commit(box, self, 'autoFind', 'Find rules', commit=self.find_rules)
 
         vbox = gui.widgetBox(self.controlArea, 'Filter rules')
-        button = self.scatter_button = gui.button(vbox, self, 'Scatter plot',
-                                                  callback=self.show_scatter,
-                                                  autoDefault=False)
-        button.setDisabled(True)
-        self.scatter = self.ScatterPlotWindow(self)
+
+        ## This is disabled because it's hard to make a scatter plot with
+        ## selectable spots. Options:
+        ## * PyQtGraph, which doesn't support selection OOTB (+is poorly
+        ##   contrived and under-documented);
+        ## * Orange.widgets.visualize.ScatterPlotGraph, which comes without
+        ##   any documentation or comprehensible examples of use whatsoever;
+        ## * QGraphicsView, which would work, but lacks graphing features,
+        ##   namely labels, axes, ticks.
+        ##
+        ## I don't feel like pursuing any of those right now, so I am letting
+        ## it to be figured out at a later date.
+        #~ button = self.scatter_button = gui.button(vbox, self, 'Scatter plot',
+                                                  #~ callback=self.show_scatter,
+                                                  #~ autoDefault=False)
+        #~ button.setDisabled(True)
+        #~ self.scatter = self.ScatterPlotWindow(self)
 
         box = gui.widgetBox(vbox, 'Antecedent')
         gui.lineEdit(box, self, 'filterKeywordsAntecedent', 'Contains:',
@@ -233,8 +245,8 @@ class OWAssociate(widget.OWWidget):
             item.setToolTip(tooltip)
             model.setHorizontalHeaderItem(col, item)
 
-        # Aggregate rules by common (support,confidence) for scatterplot
-        scatter_agg = defaultdict(list)
+        #~ # Aggregate rules by common (support,confidence) for scatterplot
+        #~ scatter_agg = defaultdict(list)
 
         # Find itemsets
         nRules = 0
@@ -288,7 +300,7 @@ class OWAssociate(widget.OWWidget):
                                  left_item,
                                  StandardItem('→'),
                                  StandardItem(right_str, len(right))])
-                scatter_agg[(round(support / n_examples, 2), round(confidence, 2))].append((left, right))
+                #~ scatter_agg[(round(support / n_examples, 2), round(confidence, 2))].append((left, right))
                 nRules += 1
                 progress.advance()
                 if nRules >= self.maxRules:
@@ -314,10 +326,10 @@ class OWAssociate(widget.OWWidget):
         self.nSelectedRules = 0
         self.nSelectedExamples = 0
 
-        self.scatter_agg = scatter_agg
-        self.scatter_button.setDisabled(not nRules)
-        if self.scatter.isVisible():
-            self.show_scatter()
+        #~ self.scatter_agg = scatter_agg
+        #~ self.scatter_button.setDisabled(not nRules)
+        #~ if self.scatter.isVisible():
+            #~ self.show_scatter()
 
     class ScatterPlotWindow(QMainWindow):
 
