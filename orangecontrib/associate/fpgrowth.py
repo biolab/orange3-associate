@@ -328,7 +328,7 @@ class OneHot:
     Encode discrete Orange.data.Table into a 2D array of binary attributes.
     """
     @staticmethod
-    def encode(table):
+    def encode(table, include_class=False):
         """
         Return a tuple of
         (bool (one hot) ndarray, {col: (variable_index, value_index)} mapping)
@@ -339,6 +339,11 @@ class OneHot:
             for j, val in enumerate(var.values):
                 mapping[len(encoded)] = i, j
                 encoded.append(X[:, i] == j)
+        if include_class and table.domain.has_discrete_class:
+            i, var = len(table.domain.attributes), table.domain.class_var
+            for j, val in enumerate(var.values):
+                mapping[len(encoded)] = i, j
+                encoded.append(table.Y == j)
         return np.column_stack(encoded), mapping
 
     @staticmethod
@@ -347,14 +352,14 @@ class OneHot:
         attributes = table.domain.attributes
         for item in itemset:
             ivar, ival = mapping[item]
-            var = attributes[ivar]
+            var = attributes[ivar] if ivar < len(attributes) else table.domain.class_var
             yield item, var, var.values[ival]
 
 
 def preprocess(table):
     if table.domain.has_continuous_attributes():
         raise ValueError('Frequent itemsets require all variables to be discrete')
-    encoded, mapping = OneHot.encode(table)
+    encoded, mapping = OneHot.encode(table, table.domain.has_discrete_class)
     return encoded
 
 
