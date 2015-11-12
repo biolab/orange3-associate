@@ -59,9 +59,11 @@ class OWItemsets(widget.OWWidget):
 
         box = gui.widgetBox(self.controlArea, 'Find itemsets')
         gui.hSlider(box, self, 'minSupport', minValue=1, maxValue=100,
-                    label='Minimal support [%]', callback=lambda: self.find_itemsets())
+                    label='Minimal support:', labelFormat="%d%%",
+                    callback=lambda: self.find_itemsets())
         gui.hSlider(box, self, 'maxItemsets', minValue=10000, maxValue=100000, step=10000,
-                    label='Max. number of itemsets', callback=lambda: self.find_itemsets())
+                    label='Max. number of itemsets:', labelFormat="%d",
+                    callback=lambda: self.find_itemsets())
         gui.checkBox(box, self, 'filterSearch',
                      label='Apply below filters in search')
         gui.auto_commit(box, self, 'autoFind', 'Find itemsets', commit=self.find_itemsets)
