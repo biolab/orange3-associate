@@ -29,6 +29,7 @@ if __name__ == '__main__':
     setup(
         name="Orange3-Associate",
         description="Orange add-on for mining frequent itemsets and association rules.",
+        long_description=open(path.join(path.dirname(__file__), 'README.md')).read(),
         version=VERSION,
         author='Bioinformatics Laboratory, FRI UL',
         author_email='contact@orange.biolab.si',
@@ -57,6 +58,16 @@ if __name__ == '__main__':
                       sources=[path.sep.join(("orangecontrib", "associate", "_fpgrowth.cpp"))],
                       extra_compile_args=["-std=c++11", "-O3"],
                       language="c++",)
+        ],
+        classifiers=[
+            'Programming Language :: Python',
+            'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
+            'Operating System :: OS Independent',
+            'Topic :: Scientific/Engineering :: Artificial Intelligence',
+            'Topic :: Software Development :: Libraries :: Python Modules',
+            'Intended Audience :: Education',
+            'Intended Audience :: Science/Research',
+            'Intended Audience :: Developers',
         ],
         zip_safe=False,
     )
