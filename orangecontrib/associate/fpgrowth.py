@@ -229,15 +229,20 @@ def frequent_itemsets(X, min_support=.2):
         The database of transactions where each transaction is a collection
         of integer items. If numpy.ndarray, the items are considered to be
         indexes of non-zero columns.
-    min_support : float
-        Percent of minimal support for itemset to be considered frequent.
+    min_support : float or int
+        If float in range (0, 1), percent of minimal support for itemset to
+        be considered frequent. If int > 1, the absolute number of instances.
+        For example, general iterators don't have defined length, so you need
+        to pass the absolute minimal support as int.
     """
     if not isinstance(X, (np.ndarray, spmatrix, list, Iterator)):
         raise TypeError('X must be (sparse) array of boolean values, or list of lists of hashable items, or iterator')
     if not 0 < min_support < 1:
         raise ValueError('min_support must be a percent fraction in [0, 1]')
 
-    min_support *= len(X) if isinstance(X, list) else X.shape[0]
+    min_support *= (1 if isinstance(min_support, int) else
+                    len(X) if isinstance(X, list) else
+                    X.shape[0])
     min_support = max(1, int(np.ceil(min_support)))
 
     if issparse(X):
