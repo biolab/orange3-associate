@@ -22,6 +22,7 @@ rules_stats() functions below.
 """
 
 # TODO: Consider FPClose from "Efficiently using prefix-trees in mining frequent itemsets"
+# TODO: Consider ExAnte: Anticipated data reduction in constrained pattern mining
 
 from collections import defaultdict, Iterator
 from itertools import combinations, chain
@@ -237,7 +238,7 @@ def frequent_itemsets(X, min_support=.2):
         raise ValueError('min_support must be a percent fraction in [0, 1]')
 
     min_support *= len(X) if isinstance(X, list) else X.shape[0]
-    min_support = max(1, int(min_support))
+    min_support = max(1, int(np.ceil(min_support)))
 
     if issparse(X):
         X = X.tolil().rows
