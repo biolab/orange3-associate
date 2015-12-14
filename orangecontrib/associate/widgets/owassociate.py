@@ -84,7 +84,14 @@ class OWAssociate(widget.OWWidget):
         self.cb_classify = gui.checkBox(
             box, self, 'classify', label='Induce classification (itemset → class) rules')
         gui.checkBox(box, self, 'filterSearch',
-                     label='Apply below filters in search')
+                     label='Apply below filters in search',
+                     tooltip='If checked, the rules are filtered according '
+                             'to below filter conditions already in the search '
+                             'phase. \nIf unchecked, the only filters applied '
+                             'during search are the ones above, '
+                             'and the generated rules \nare filtered afterwards '
+                             'only for display, i.e. only the matching association '
+                             'rules are shown.')
         b = gui.auto_commit(box, self, 'autoFind', 'Find rules', commit=self.find_rules)
 
         vbox = gui.widgetBox(self.controlArea, 'Filter rules')
@@ -108,7 +115,9 @@ class OWAssociate(widget.OWWidget):
 
         box = gui.widgetBox(vbox, 'Antecedent')
         gui.lineEdit(box, self, 'filterKeywordsAntecedent', 'Contains:',
-                     callback=self.filter_change, orientation='horizontal')
+                     callback=self.filter_change, orientation='horizontal',
+                     tooltip='A comma or space-separated list of regular '
+                             'expressions.')
         hbox = gui.widgetBox(box, orientation='horizontal')
         gui.spin(hbox, self, 'filterAntecedentMin', 1, 998, label='Min. items:',
                  callback=self.filter_change)
@@ -118,7 +127,9 @@ class OWAssociate(widget.OWWidget):
 
         box = gui.widgetBox(vbox, 'Consequent')
         gui.lineEdit(box, self, 'filterKeywordsConsequent', 'Contains:',
-                     callback=self.filter_change, orientation='horizontal')
+                     callback=self.filter_change, orientation='horizontal',
+                     tooltip='A comma or space-separated list of regular '
+                             'expressions.')
         hbox = gui.widgetBox(box, orientation='horizontal')
         gui.spin(hbox, self, 'filterConsequentMin', 1, 998, label='Min. items:',
                  callback=self.filter_change)

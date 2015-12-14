@@ -36,6 +36,17 @@ class OWItemsets(widget.OWWidget):
     filterMinItems = settings.Setting(1)
     filterMaxItems = settings.Setting(10000)
 
+    UserAdviceMessages = [
+        widget.Message('Itemset are listed in item-sorted order, i.e. '
+                       'an itemset containing A and B is only listed once, as '
+                       'A > B (and not also B > A).',
+                       'itemsets-order', widget.Message.Warning),
+        widget.Message('To select all the itemsets that are descendants of '
+                       '(include) some item X (i.e. the whole subtree), you '
+                       'can fold the subtree at that item and then select it.',
+                       'itemsets-order', widget.Message.Information)
+    ]
+
     def __init__(self):
         self.tree = QTreeWidget(self.mainArea,
                                 columnCount=2,
@@ -65,12 +76,20 @@ class OWItemsets(widget.OWWidget):
                     label='Max. number of itemsets:', labelFormat="%d",
                     callback=lambda: self.find_itemsets())
         gui.checkBox(box, self, 'filterSearch',
-                     label='Apply below filters in search')
+                     label='Apply below filters in search',
+                     tooltip='If checked, the itemsets are filtered according '
+                             'to below filter conditions already in the search '
+                             'phase. \nIf unchecked, the only filters applied '
+                             'during search are the ones above, '
+                             'and the itemsets are \nfiltered afterwards only for '
+                             'display, i.e. only the matching itemsets are shown.')
         gui.auto_commit(box, self, 'autoFind', 'Find itemsets', commit=self.find_itemsets)
 
         box = gui.widgetBox(self.controlArea, 'Filter itemsets')
         gui.lineEdit(box, self, 'filterKeywords', 'Contains:',
-                     callback=self.filter_change, orientation='horizontal')
+                     callback=self.filter_change, orientation='horizontal',
+                     tooltip='A comma or space-separated list of regular '
+                             'expressions.')
         hbox = gui.widgetBox(box, orientation='horizontal')
         gui.spin(hbox, self, 'filterMinItems', 1, 998, label='Min. items:',
                  callback=self.filter_change)
