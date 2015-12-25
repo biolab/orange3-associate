@@ -29,7 +29,7 @@ if __name__ == '__main__':
     setup(
         name="Orange3-Associate",
         description="Orange add-on for mining frequent itemsets and association rules.",
-        long_description=open(path.join(path.dirname(__file__), 'README.md')).read(),
+        long_description=open(path.join(path.dirname(__file__), 'README.rst')).read(),
         version=VERSION,
         author='Bioinformatics Laboratory, FRI UL',
         author_email='contact@orange.biolab.si',
