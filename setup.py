@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 from distutils.extension import Extension
 from os import path
 
-VERSION = '0.1.1'
+VERSION = '0.1.2'
 
 ENTRY_POINTS = {
     'orange3.addon': (
@@ -35,12 +35,13 @@ if __name__ == '__main__':
         author_email='contact@orange.biolab.si',
         url='https://github.com/biolab/orange3-associate',
         keywords=(
-            'FIM', 'frequent itemset mining',
-            'FPM', 'frequent pattern mining',
-            'frequent patterns',
+            'frequent itemset mining',
+            'frequent pattern mining',
             'association rules',
             'apriori',
             'fp-growth',
+            'frequent patterns',
+            'FIM', 'FPM',
             'orange3 add-on',
         ),
         packages=find_packages(),
@@ -48,9 +49,6 @@ if __name__ == '__main__':
             "orangecontrib.associate.widgets": ["icons/*.svg"],
             "orangecontrib.associate": ["*.pyx"],
         },
-        install_requires=[
-            'Orange',
-        ],
         entry_points=ENTRY_POINTS,
         namespace_packages=['orangecontrib'],
         ext_modules=[
