@@ -25,7 +25,7 @@ ENTRY_POINTS = {
     ),
 }
 
-if __name__ == '__main__':
+def do_setup(ext_modules):
     setup(
         name="Orange3-Associate",
         description="Orange add-on for mining frequent itemsets and association rules.",
@@ -51,12 +51,7 @@ if __name__ == '__main__':
         },
         entry_points=ENTRY_POINTS,
         namespace_packages=['orangecontrib'],
-        ext_modules=[
-            Extension("orangecontrib.associate._fpgrowth",
-                      sources=[path.sep.join(("orangecontrib", "associate", "_fpgrowth.cpp"))],
-                      extra_compile_args=["-std=c++11", "-O3"],
-                      language="c++",)
-        ],
+        ext_modules=ext_modules,
         classifiers=[
             'Programming Language :: Python',
             'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
@@ -69,3 +64,20 @@ if __name__ == '__main__':
         ],
         zip_safe=False,
     )
+
+
+if __name__ == '__main__':
+    ext_modules=[
+        Extension("orangecontrib.associate._fpgrowth",
+                  sources=[path.sep.join(("orangecontrib", "associate", "_fpgrowth.cpp"))],
+                  extra_compile_args=["-std=c++11", "-O3"],
+                  language="c++",)
+    ]
+    try:
+        do_setup(ext_modules)
+    except:  # fails if no compiler present, e.g. on WinDOS
+        import sys
+        print('WARNING: Falling back to NOT compiling extension modules. '
+              'Performance should suffer. Enjoy.',
+              file=sys.stderr)
+        do_setup([])
