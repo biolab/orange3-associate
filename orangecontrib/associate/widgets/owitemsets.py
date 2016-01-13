@@ -83,7 +83,8 @@ class OWItemsets(widget.OWWidget):
                              'during search are the ones above, '
                              'and the itemsets are \nfiltered afterwards only for '
                              'display, i.e. only the matching itemsets are shown.')
-        gui.auto_commit(box, self, 'autoFind', 'Find itemsets', commit=self.find_itemsets)
+        self.button = gui.auto_commit(
+            box, self, 'autoFind', 'Find itemsets', commit=self.find_itemsets)
 
         box = gui.widgetBox(self.controlArea, 'Filter itemsets')
         gui.lineEdit(box, self, 'filterKeywords', 'Contains:',
@@ -268,6 +269,9 @@ class OWItemsets(widget.OWWidget):
         if data is not None:
             self.warning(0, 'Data has continuous attributes which will be skipped.'
                             if data.domain.has_continuous_attributes() else None)
+            self.error(1, 'Discrete features required but data has none.'
+                          if not data.domain.has_discrete_attributes() else None)
+            self.button.setDisabled(not data.domain.has_discrete_attributes())
         if self.autoFind:
             self.find_itemsets()
 

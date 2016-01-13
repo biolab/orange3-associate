@@ -92,7 +92,8 @@ class OWAssociate(widget.OWWidget):
                              'and the generated rules \nare filtered afterwards '
                              'only for display, i.e. only the matching association '
                              'rules are shown.')
-        b = gui.auto_commit(box, self, 'autoFind', 'Find rules', commit=self.find_rules)
+        self.button = gui.auto_commit(
+                box, self, 'autoFind', 'Find rules', commit=self.find_rules)
 
         vbox = gui.widgetBox(self.controlArea, 'Filter rules')
 
@@ -434,6 +435,9 @@ class OWAssociate(widget.OWWidget):
                 self.classify = False
             self.warning(0, 'Data has continuous attributes which will be skipped.'
                             if data.domain.has_continuous_attributes() else None)
+            self.error(1, 'Discrete features required but data has none.'
+                          if not data.domain.has_discrete_attributes() else None)
+        self.button.setDisabled(not data.domain.has_discrete_attributes())
         if self.autoFind:
             self.find_rules()
 
