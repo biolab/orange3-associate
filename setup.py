@@ -50,6 +50,10 @@ def do_setup(ext_modules):
             "orangecontrib.associate": ["*.pyx"],
         },
         entry_points=ENTRY_POINTS,
+        install_requires=[
+            'numpy',
+            'scipy',
+        ],
         namespace_packages=['orangecontrib'],
         ext_modules=ext_modules,
         classifiers=[
