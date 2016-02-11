@@ -266,7 +266,7 @@ def frequent_itemsets(X, min_support=.2):
         yield from _fp_growth(tree, frozenset(), min_support)
 
 
-def _gen_assoc_rules(rule, last_item, support, min_confidence, itemsets):
+def _association_rules(rule, last_item, support, min_confidence, itemsets):
     left, right = rule
     if not left: return
     confidence = support / itemsets[left]
@@ -274,12 +274,12 @@ def _gen_assoc_rules(rule, last_item, support, min_confidence, itemsets):
         yield rule, support, confidence
         for item in left:
             if item > last_item: continue  # This ensures same rules aren't visited twice
-            yield from _gen_assoc_rules(
+            yield from _association_rules(
                 (left - {item}, right | {item}),
                 item, support, min_confidence, itemsets)
 
 
-def gen_assoc_rules(itemsets, min_confidence, itemset=None):
+def association_rules(itemsets, min_confidence, itemset=None):
     """
     Generate association rules ([3] § 12.3) from dict of itemsets' supports
     (from frequent_items()). If `itemset` is provided, only generate its rules.
@@ -296,7 +296,7 @@ def gen_assoc_rules(itemsets, min_confidence, itemset=None):
         support = itemsets[itemset]
         for item in itemset:
             right = frozenset({item})
-            yield from _gen_assoc_rules(
+            yield from _association_rules(
                 (itemset - right, right),
                 item, support, min_confidence, itemsets)
 

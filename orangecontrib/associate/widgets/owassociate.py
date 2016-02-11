@@ -15,7 +15,7 @@ from PyQt4.QtGui import (
     QPen, QBrush, QColor)
 
 
-from orangecontrib.associate.fpgrowth import frequent_itemsets, OneHot, gen_assoc_rules, rules_stats
+from orangecontrib.associate.fpgrowth import frequent_itemsets, OneHot, association_rules, rules_stats
 
 import pyqtgraph as pg
 
@@ -278,9 +278,9 @@ class OWAssociate(widget.OWWidget):
                  not isRegexMatch(itemset_str, itemset_str))):
                 continue
 
-            for rule in gen_assoc_rules(itemsets,
-                                        self.minConfidence / 100,
-                                        itemset):
+            for rule in association_rules(itemsets,
+                                          self.minConfidence / 100,
+                                          itemset):
                 (left, right), support, confidence = rule
 
                 if class_items and right - class_items:
