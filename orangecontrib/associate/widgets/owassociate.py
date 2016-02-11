@@ -281,7 +281,7 @@ class OWAssociate(widget.OWWidget):
             for rule in association_rules(itemsets,
                                           self.minConfidence / 100,
                                           itemset):
-                (left, right), support, confidence = rule
+                left, right, support, confidence = rule
 
                 if class_items and right - class_items:
                     continue
@@ -293,7 +293,7 @@ class OWAssociate(widget.OWWidget):
                     continue
 
                 # All filters matched, calculate stats and add table row
-                _, _, _, coverage, strength, lift, leverage = next(
+                _, _, _, _, coverage, strength, lift, leverage = next(
                     rules_stats((rule,), itemsets, n_examples))
 
                 support_item = NumericItem(support / n_examples)

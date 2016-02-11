@@ -266,16 +266,15 @@ def frequent_itemsets(X, min_support=.2):
         yield from _fp_growth(tree, frozenset(), min_support)
 
 
-def _association_rules(rule, last_item, support, min_confidence, itemsets):
-    left, right = rule
+def _association_rules(left, right, last_item, support, min_confidence, itemsets):
     if not left: return
     confidence = support / itemsets[left]
     if confidence >= min_confidence:
-        yield rule, support, confidence
+        yield left, right, support, confidence
         for item in left:
             if item > last_item: continue  # This ensures same rules aren't visited twice
             yield from _association_rules(
-                (left - {item}, right | {item}),
+                left - {item}, right | {item},
                 item, support, min_confidence, itemsets)
 
 
@@ -297,7 +296,7 @@ def association_rules(itemsets, min_confidence, itemset=None):
         for item in itemset:
             right = frozenset({item})
             yield from _association_rules(
-                (itemset - right, right),
+                itemset - right, right,
                 item, support, min_confidence, itemsets)
 
 
@@ -314,13 +313,13 @@ def rules_stats(rules, itemsets, n_examples):
     assert (isinstance(itemsets, dict) and
             isinstance(next(iter(itemsets), frozenset()), frozenset))
     assert n_examples > 0
-    for (left, right), support, confidence in rules:
+    for left, right, support, confidence in rules:
         l_support, r_support = itemsets[left], itemsets[right]
         coverage = l_support / n_examples
         strength = r_support / l_support
         lift = n_examples * confidence / r_support
         leverage = (support*n_examples - l_support*r_support) / n_examples**2
-        yield ((left, right), support, confidence,
+        yield (left, right, support, confidence,
                coverage, strength, lift, leverage)
 
 
