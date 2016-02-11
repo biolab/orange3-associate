@@ -241,9 +241,12 @@ def frequent_itemsets(X, min_support=.2):
         to pass the absolute minimal support as int.
     """
     if not isinstance(X, (np.ndarray, spmatrix, list, Iterator)):
-        raise TypeError('X must be (sparse) array of boolean values, or list of lists of hashable items, or iterator')
-    if not 0 < min_support < 1:
-        raise ValueError('min_support must be a percent fraction in [0, 1]')
+        raise TypeError('X must be (sparse) array of boolean values, or'
+                        'list of lists of hashable items, or iterator')
+    if not (isinstance(min_support, int) and min_support > 0 or
+            isinstance(min_support, float) and 0 < min_support <= 1):
+        raise ValueError('min_support must be an integer number of instances,'
+                         'or a percent fraction in (0, 1]')
 
     min_support *= (1 if isinstance(min_support, int) else
                     len(X) if isinstance(X, list) else
@@ -257,9 +260,10 @@ def frequent_itemsets(X, min_support=.2):
 
     db = ((1, transaction) for transaction in X)  # 1 is initial item support
     tree, itemsets = _fp_tree(db, min_support)
-    #~ if tree is not None:
-        #~ print(__fp_tree_count_nodes(tree), __fp_tree_max_height(tree), tree)
-    yield from (itemsets or _fp_growth(tree, frozenset(), min_support))
+    if itemsets:
+        yield from itemsets
+    if tree:
+        yield from _fp_growth(tree, frozenset(), min_support)
 
 
 def _gen_assoc_rules(rule, last_item, support, min_confidence, itemsets):
