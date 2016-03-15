@@ -433,7 +433,7 @@ def frequent_itemsets(X, min_support=.2):
     if issparse(X):
         X = X.tolil().rows
     elif isinstance(X, np.ndarray):
-        X = (t.nonzero()[0] for t in X)
+        X = (t.nonzero()[-1] for t in X)
 
     db = ((1, transaction) for transaction in X)  # 1 is initial item support
     tree, itemsets = _fp_tree(db, min_support)
