@@ -70,9 +70,11 @@ class OWItemsets(widget.OWWidget):
         gui.button(hbox, self, "Collapse all", callback=self.tree.collapseAll)
 
         box = gui.widgetBox(self.controlArea, 'Find itemsets')
-        gui.hSlider(box, self, 'minSupport', minValue=1, maxValue=100,
-                    label='Minimal support:', labelFormat="%d%%",
-                    callback=lambda: self.find_itemsets())
+        gui.valueSlider(
+            box, self, 'minSupport',
+            values=[.0001, .0005, .001, .005, .01, .05, .1, .5] + list(range(1, 101)),
+            label='Minimal support:', labelFormat="%g%%",
+            callback=lambda: self.find_itemsets())
         gui.hSlider(box, self, 'maxItemsets', minValue=10000, maxValue=100000, step=10000,
                     label='Max. number of itemsets:', labelFormat="%d",
                     callback=lambda: self.find_itemsets())
@@ -231,7 +233,7 @@ class OWItemsets(widget.OWWidget):
 
                 child = parent.get(name)
                 if child is None:
-                    wi = self.TreeWidgetItem(parent.item, [name, str(support), '{:.1f}'.format(100 * support / len(data))])
+                    wi = self.TreeWidgetItem(parent.item, [name, str(support), '{:.g}'.format(100 * support / len(data))])
                     wi.setData(0, self.ITEM_DATA_ROLE, item)
                     child = parent[name] = ItemDict(wi)
 

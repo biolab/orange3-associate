@@ -76,12 +76,15 @@ class OWAssociate(widget.OWWidget):
         gui.label(box, self, "Selected examples: %(nSelectedExamples)s")
 
         box = gui.widgetBox(self.controlArea, 'Find association rules')
-        gui.hSlider(box, self, 'minSupport', minValue=1, maxValue=100,
-                    label='Minimal support [%]', callback=lambda: self.find_rules())
+        gui.valueSlider(box, self, 'minSupport',
+                        values=[.0001, .0005, .001, .005, .01, .05, .1, .5] + list(range(1, 101)),
+                        label='Minimal support:', labelFormat="%g%%",
+                        callback=lambda: self.find_rules())
         gui.hSlider(box, self, 'minConfidence', minValue=1, maxValue=100,
-                    label='Minimal confidence [%]', callback=lambda: self.find_rules())
+                    label='Minimal confidence:', labelFormat="%g%%",
+                    callback=lambda: self.find_rules())
         gui.hSlider(box, self, 'maxRules', minValue=10000, maxValue=100000, step=10000,
-                    label='Max. number of rules', callback=lambda: self.find_rules())
+                    label='Max. number of rules:', callback=lambda: self.find_rules())
         self.cb_classify = gui.checkBox(
             box, self, 'classify', label='Induce classification (itemset → class) rules')
         gui.checkBox(box, self, 'filterSearch',
