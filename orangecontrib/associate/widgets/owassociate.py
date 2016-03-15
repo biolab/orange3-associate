@@ -3,6 +3,7 @@ import re
 from collections import defaultdict
 
 import numpy as np
+from scipy.sparse import issparse
 
 from Orange.data import Table
 from Orange.widgets import widget, gui, settings
@@ -181,13 +182,17 @@ class OWAssociate(widget.OWWidget):
         self.table.__class__.selectionChanged(self.table, selected, deselected)
         mapping = self.onehot_mapping
         where = np.where
-        X, Y = self.data.X, self.data.Y
+        X, Y = self.X, self.data.Y
         instances = set()
         selected_rows = self.table.selectionModel().selectedRows(0)
         for model_index in selected_rows:
             itemset, class_item = model_index.data(self.ROW_DATA_ROLE)
             cols, vals = zip(*(mapping[i] for i in itemset))
-            matching = set(where((X[:, cols] == vals).all(axis=1))[0])
+            if issparse(X):
+                matching = (len(cols) == np.bincount((X[:, cols] != 0).indices,
+                                                     minlength=X.shape[0])).nonzero()[0]
+            else:
+                matching = set(where((X[:, cols] == vals).all(axis=1))[0])
             if class_item:
                 matching &= set(where(Y == mapping[class_item][1])[0])
             instances.update(matching)
@@ -234,9 +239,9 @@ class OWAssociate(widget.OWWidget):
 
         X, mapping = OneHot.encode(data, self.classify)
         self.onehot_mapping = mapping
-        names = {item: '{}={}'.format(var.name, val)
+        ITEM_FMT = '{}' if issparse(data.X) else '{}={}'
+        names = {item: ('{}={}' if var is data.domain.class_var else ITEM_FMT).format(var.name, val)
                  for item, var, val in OneHot.decode(mapping, data, mapping)}
-
         # Items that consequent must include if classifying
         class_items = {item
                        for item, var, val in OneHot.decode(mapping, data, mapping)
@@ -287,8 +292,8 @@ class OWAssociate(widget.OWWidget):
                     continue
                 if filterSearch and not isSizeMatch(len(left), len(right)):
                     continue
-                left_str = ' '.join(names[i] for i in sorted(left))
-                right_str = ' '.join(names[i] for i in sorted(right))
+                left_str =  ', '.join(names[i] for i in sorted(left))
+                right_str = ', '.join(names[i] for i in sorted(right))
                 if filterSearch and not isRegexMatch(left_str, right_str):
                     continue
 
@@ -433,11 +438,21 @@ class OWAssociate(widget.OWWidget):
             if not data.domain.has_discrete_class:
                 self.cb_classify.setDisabled(True)
                 self.classify = False
-            self.warning(0, 'Data has continuous attributes which will be skipped.'
-                            if data.domain.has_continuous_attributes() else None)
-            self.error(1, 'Discrete features required but data has none.'
-                          if not data.domain.has_discrete_attributes() else None)
-        self.button.setDisabled(not data.domain.has_discrete_attributes())
+            self.X = data.X
+            self.warning(0)
+            self.error(1)
+            self.button.setDisabled(False)
+            if issparse(data.X):
+                self.X = data.X.tocsc()
+            else:
+                if data.domain.has_continuous_attributes():
+                    self.warning(0, 'Data has continuous attributes which will be skipped.')
+                if not data.domain.has_discrete_attributes():
+                    self.error(1, 'Discrete features required but data has none.')
+                    self.button.setDisabled(True)
+        else:
+            self.output = None
+            self.commit()
         if self.autoFind:
             self.find_rules()
 

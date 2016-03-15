@@ -612,19 +612,35 @@ class OneHot:
         """
         Return a tuple of
         (bool (one hot) ndarray, {col: (variable_index, value_index)} mapping)
+
+        If the input table is sparse, a list of nonzero column indices
+        per row (LIL rows) is returned instead of the one-hot ndarray.
         """
         X, encoded, mapping = table.X, [], {}
-        for i, var in enumerate(table.domain.attributes):
-            if not var.is_discrete: continue
-            for j, val in enumerate(var.values):
-                mapping[len(encoded)] = i, j
-                encoded.append(X[:, i] == j)
+        if issparse(X):
+            encoded = X.tolil().rows.tolist()
+            for i, var in enumerate(table.domain.attributes):
+                mapping[i] = i, 0
+        else:
+            for i, var in enumerate(table.domain.attributes):
+                if not var.is_discrete: continue
+                for j, val in enumerate(var.values):
+                    mapping[len(mapping)] = i, j
+                    encoded.append(X[:, i] == j)
+
         if include_class and table.domain.has_discrete_class:
             i, var = len(table.domain.attributes), table.domain.class_var
             for j, val in enumerate(var.values):
-                mapping[len(encoded)] = i, j
-                encoded.append(table.Y == j)
-        return np.column_stack(encoded), mapping
+                mapping[len(mapping)] = i, j
+                if issparse(X):
+                    for row in encoded:
+                        row.append(i + j)
+                else:
+                    encoded.append(table.Y == j)
+
+        if not issparse(X):
+            encoded = np.column_stack(encoded)
+        return encoded, mapping
 
     @staticmethod
     def decode(itemset, table, mapping):
@@ -633,7 +649,7 @@ class OneHot:
         for item in itemset:
             ivar, ival = mapping[item]
             var = attributes[ivar] if ivar < len(attributes) else table.domain.class_var
-            yield item, var, var.values[ival]
+            yield item, var, (var.values[ival] if var.is_discrete else 0)
 
 
 def preprocess(table):

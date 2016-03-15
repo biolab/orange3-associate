@@ -2,6 +2,7 @@
 import re
 
 import numpy as np
+from scipy.sparse import issparse
 
 from Orange.data import Table
 from Orange.widgets import widget, gui, settings
@@ -103,19 +104,10 @@ class OWItemsets(widget.OWWidget):
 
         self.filter_change()
 
-    def sendReport(self):
-        self.reportSettings("Itemset statistics",
-                            [("Number of itemsets", self.nItemsets),
-                             ("Selected itemsets", self.nSelectedItemsets),
-                             ("Covered examples", self.nSelectedExamples),
-                             ])
-        self.reportSection("Itemsets")
-        self.reportRaw(OWReport.reportTree(self.tree))
-
     ITEM_DATA_ROLE = Qt.UserRole + 1
 
     def selectionChanged(self):
-        X = self.data.X
+        X = self.X
         mapping = self.onehot_mapping
         instances = set()
         where = np.where
@@ -148,7 +140,12 @@ class OWItemsets(widget.OWWidget):
             for node in nodes:
                 nSelectedItemsets += 1
                 cols, vals = zip(*(mapping[i] for i in itemset(node)))
-                instances.update(where((X[:, cols] == vals).all(axis=1))[0])
+                if issparse(X):
+                    rows = (len(cols) == np.bincount((X[:, cols] != 0).indices,
+                                                     minlength=X.shape[0])).nonzero()[0]
+                else:
+                    rows = where((X[:, cols] == vals).all(axis=1))[0]
+                instances.update(rows)
         self.tree.itemSelectionChanged.disconnect(self.selectionChanged)
         self.tree.selectionModel().select(item_selection,
                                           QItemSelectionModel.Select | QItemSelectionModel.Rows)
@@ -206,7 +203,8 @@ class OWItemsets(widget.OWWidget):
         top = ItemDict(self.tree.invisibleRootItem())
         X, mapping = OneHot.encode(data)
         self.onehot_mapping = mapping
-        names = {item: '{}={}'.format(var.name, val)
+        ITEM_FMT = '{}' if issparse(data.X) else '{}={}'
+        names = {item: ITEM_FMT.format(var.name, val)
                  for item, var, val in OneHot.decode(mapping.keys(), data, mapping)}
         nItemsets = 0
 
@@ -267,11 +265,21 @@ class OWItemsets(widget.OWWidget):
     def set_data(self, data):
         self.data = data
         if data is not None:
-            self.warning(0, 'Data has continuous attributes which will be skipped.'
-                            if data.domain.has_continuous_attributes() else None)
-            self.error(1, 'Discrete features required but data has none.'
-                          if not data.domain.has_discrete_attributes() else None)
-            self.button.setDisabled(not data.domain.has_discrete_attributes())
+            self.warning(0)
+            self.error(1)
+            self.button.setDisabled(False)
+            self.X = data.X
+            if issparse(data.X):
+                self.X = data.X.tocsc()
+            else:
+                if data.domain.has_continuous_attributes():
+                    self.warning(0, 'Data has continuous attributes which will be skipped.')
+                if not data.domain.has_discrete_attributes():
+                    self.error(1, 'Discrete features required but data has none.')
+                    self.button.setDisabled(True)
+        else:
+            self.output = None
+            self.commit()
         if self.autoFind:
             self.find_itemsets()
 
