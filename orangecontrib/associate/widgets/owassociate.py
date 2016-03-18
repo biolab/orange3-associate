@@ -170,11 +170,11 @@ class OWAssociate(widget.OWWidget):
         self._antecedentMatch = re.compile(
             '|'.join(i.strip()
                      for i in re.split('(,|\s)+', self.filterKeywordsAntecedent.strip())
-                     if i.strip())).search
+                     if i.strip()), re.IGNORECASE).search
         self._consequentMatch = re.compile(
             '|'.join(i.strip()
                      for i in re.split('(,|\s)+', self.filterKeywordsConsequent.strip())
-                     if i.strip())).search
+                     if i.strip()), re.IGNORECASE).search
         self.proxy_model.invalidateFilter()
         self.nFilteredRules = self.proxy_model.rowCount()
 

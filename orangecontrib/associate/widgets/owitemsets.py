@@ -165,7 +165,7 @@ class OWItemsets(widget.OWWidget):
         isRegexMatch = self.isRegexMatch = re.compile(
             '|'.join(i.strip()
                      for i in re.split('(,|\s)+', self.filterKeywords.strip())
-                     if i.strip())).search
+                     if i.strip()), re.IGNORECASE).search
 
         def hide(node, depth, has_kw):
             if not has_kw:
