@@ -87,15 +87,6 @@ class OWAssociate(widget.OWWidget):
                     label='Max. number of rules:', callback=lambda: self.find_rules())
         self.cb_classify = gui.checkBox(
             box, self, 'classify', label='Induce classification (itemset → class) rules')
-        gui.checkBox(box, self, 'filterSearch',
-                     label='Apply below filters in search',
-                     tooltip='If checked, the rules are filtered according '
-                             'to below filter conditions already in the search '
-                             'phase. \nIf unchecked, the only filters applied '
-                             'during search are the ones above, '
-                             'and the generated rules \nare filtered afterwards '
-                             'only for display, i.e. only the matching association '
-                             'rules are shown.')
         self.button = gui.auto_commit(
                 box, self, 'autoFind', 'Find rules', commit=self.find_rules)
 
@@ -140,6 +131,15 @@ class OWAssociate(widget.OWWidget):
                  callback=self.filter_change)
         gui.spin(hbox, self, 'filterConsequentMax', 2, 999, label='Max. items:',
                  callback=self.filter_change)
+        gui.checkBox(box, self, 'filterSearch',
+                     label='Apply these filters in search',
+                     tooltip='If checked, the rules are filtered according '
+                             'to these filter conditions already in the search '
+                             'phase. \nIf unchecked, the only filters applied '
+                             'during search are the ones above, '
+                             'and the generated rules \nare filtered afterwards '
+                             'only for display, i.e. only the matching association '
+                             'rules are shown.')
         gui.rubber(hbox)
 
         gui.rubber(self.controlArea)

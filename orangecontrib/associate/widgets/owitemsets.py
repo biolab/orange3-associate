@@ -78,14 +78,6 @@ class OWItemsets(widget.OWWidget):
         gui.hSlider(box, self, 'maxItemsets', minValue=10000, maxValue=100000, step=10000,
                     label='Max. number of itemsets:', labelFormat="%d",
                     callback=lambda: self.find_itemsets())
-        gui.checkBox(box, self, 'filterSearch',
-                     label='Apply below filters in search',
-                     tooltip='If checked, the itemsets are filtered according '
-                             'to below filter conditions already in the search '
-                             'phase. \nIf unchecked, the only filters applied '
-                             'during search are the ones above, '
-                             'and the itemsets are \nfiltered afterwards only for '
-                             'display, i.e. only the matching itemsets are shown.')
         self.button = gui.auto_commit(
             box, self, 'autoFind', 'Find itemsets', commit=self.find_itemsets)
 
@@ -99,6 +91,15 @@ class OWItemsets(widget.OWWidget):
                  callback=self.filter_change)
         gui.spin(hbox, self, 'filterMaxItems', 2, 999, label='Max. items:',
                  callback=self.filter_change)
+        gui.checkBox(box, self, 'filterSearch',
+                     label='Apply these filters in search',
+                     tooltip='If checked, the itemsets are filtered according '
+                             'to these filter conditions already in the search '
+                             'phase. \nIf unchecked, the only filters applied '
+                             'during search are the ones above, '
+                             'and the itemsets are \nfiltered afterwards only for '
+                             'display, i.e. only the matching itemsets are shown.')
+
         gui.rubber(hbox)
 
         gui.rubber(self.controlArea)
