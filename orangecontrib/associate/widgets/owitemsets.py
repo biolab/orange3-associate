@@ -234,7 +234,16 @@ class OWItemsets(widget.OWWidget):
 
                 child = parent.get(name)
                 if child is None:
-                    wi = self.TreeWidgetItem(parent.item, [name, str(support), '{:.g}'.format(100 * support / len(data))])
+                    try:
+                        wi = self.TreeWidgetItem(
+                            parent.item,
+                            [name, str(support), '{:.4g}'.format(100 * support / len(data))])
+                    except RuntimeError:
+                        # FIXME: When autoFind was in effect and the support
+                        # slider was moved, this line excepted with:
+                        #     RuntimeError: wrapped C/C++ object of type
+                        #                   TreeWidgetItem has been deleted
+                        return
                     wi.setData(0, self.ITEM_DATA_ROLE, item)
                     child = parent[name] = ItemDict(wi)
 
