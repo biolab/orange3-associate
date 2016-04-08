@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 from distutils.extension import Extension
 from os import path
 
-VERSION = '1.1.0'
+VERSION = '1.1.2'
 
 ENTRY_POINTS = {
     'orange3.addon': (
@@ -32,7 +32,7 @@ def do_setup(ext_modules):
         long_description=open(path.join(path.dirname(__file__), 'README.rst')).read(),
         version=VERSION,
         author='Bioinformatics Laboratory, FRI UL',
-        author_email='contact@orange.biolab.si',
+        author_email='info@biolab.si',
         url='https://github.com/biolab/orange3-associate',
         keywords=(
             'frequent itemset mining',
