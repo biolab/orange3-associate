@@ -50,6 +50,7 @@ class OWAssociate(widget.OWWidget):
 
     def __init__(self):
         self.data = None
+        self._antecedentMatch = self._consequentMatch = lambda x: True
         self.proxy_model = self.ProxyModel(self)
         table = self.table = QTableView(
             self,
@@ -167,14 +168,26 @@ class OWAssociate(widget.OWWidget):
                 self._consequentMatch(consequentStr))
 
     def filter_change(self):
-        self._antecedentMatch = re.compile(
-            '|'.join(i.strip()
-                     for i in re.split('(,|\s)+', self.filterKeywordsAntecedent.strip())
-                     if i.strip()), re.IGNORECASE).search
-        self._consequentMatch = re.compile(
-            '|'.join(i.strip()
-                     for i in re.split('(,|\s)+', self.filterKeywordsConsequent.strip())
-                     if i.strip()), re.IGNORECASE).search
+        self.warning(9)
+        WARNING = 'Error in {} regular expression: {}'
+        try:
+            self._antecedentMatch = re.compile(
+                '|'.join(i.strip()
+                         for i in re.split('(,|\s)+',
+                                           self.filterKeywordsAntecedent.strip())
+                         if i.strip()), re.IGNORECASE).search
+        except Exception as e:
+            self.warning(9, WARNING.format('antecedent', e.args[0]))
+            self._antecedentMatch = lambda x: True
+        try:
+            self._consequentMatch = re.compile(
+                '|'.join(i.strip()
+                         for i in re.split('(,|\s)+',
+                                           self.filterKeywordsConsequent.strip())
+                         if i.strip()), re.IGNORECASE).search
+        except Exception as e:
+            self.warning(9, WARNING.format('consequent', e.args[0]))
+            self._consequentMatch = lambda x: True
         self.proxy_model.invalidateFilter()
         self.nFilteredRules = self.proxy_model.rowCount()
 

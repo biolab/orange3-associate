@@ -49,6 +49,7 @@ class OWItemsets(widget.OWWidget):
     ]
 
     def __init__(self):
+        self.isRegexMatch = lambda x: True
         self.tree = QTreeWidget(self.mainArea,
                                 columnCount=2,
                                 allColumnsShowFocus=True,
@@ -163,10 +164,15 @@ class OWItemsets(widget.OWWidget):
         self.send(Output.DATA, self.output)
 
     def filter_change(self):
-        isRegexMatch = self.isRegexMatch = re.compile(
-            '|'.join(i.strip()
-                     for i in re.split('(,|\s)+', self.filterKeywords.strip())
-                     if i.strip()), re.IGNORECASE).search
+        self.warning(9)
+        try:
+            isRegexMatch = self.isRegexMatch = re.compile(
+                '|'.join(i.strip()
+                         for i in re.split('(,|\s)+', self.filterKeywords.strip())
+                         if i.strip()), re.IGNORECASE).search
+        except Exception as e:
+            self.warning(9, 'Error in regular expression: {}'.format(e.args[0]))
+            isRegexMatch = self.isRegexMatch = lambda x: True
 
         def hide(node, depth, has_kw):
             if not has_kw:
