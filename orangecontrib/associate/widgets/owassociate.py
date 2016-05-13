@@ -50,6 +50,7 @@ class OWAssociate(widget.OWWidget):
 
     def __init__(self):
         self.data = None
+        self._is_running = False
         self._antecedentMatch = self._consequentMatch = lambda x: True
         self.proxy_model = self.ProxyModel(self)
         table = self.table = QTableView(
@@ -240,7 +241,11 @@ class OWAssociate(widget.OWWidget):
                                             consequent.data()))
 
     def find_rules(self):
-        if self.data is None: return
+        if self.data is None:
+            return
+        if self._is_running:
+            return
+        self._is_running = True
         data = self.data
         self.table.model().clear()
 
@@ -358,6 +363,7 @@ class OWAssociate(widget.OWWidget):
         self.nFilteredRules = proxy_model.rowCount()  # TODO: continue; also add in owitemsets
         self.nSelectedRules = 0
         self.nSelectedExamples = 0
+        self._is_running = False
 
         #~ self.scatter_agg = scatter_agg
         #~ self.scatter_button.setDisabled(not nRules)

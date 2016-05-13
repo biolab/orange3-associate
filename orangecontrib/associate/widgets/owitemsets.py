@@ -49,6 +49,7 @@ class OWItemsets(widget.OWWidget):
     ]
 
     def __init__(self):
+        self._is_running = False
         self.isRegexMatch = lambda x: True
         self.tree = QTreeWidget(self.mainArea,
                                 columnCount=2,
@@ -199,7 +200,12 @@ class OWItemsets(widget.OWWidget):
             return ' '.join(reversed(tooltip))
 
     def find_itemsets(self):
-        if self.data is None: return
+        if self.data is None:
+            return
+        if self._is_running:
+            return
+        self._is_running = True
+
         data = self.data
         self.tree.clear()
         self.tree.setUpdatesEnabled(False)
@@ -279,6 +285,7 @@ class OWItemsets(widget.OWWidget):
         self.tree.setUpdatesEnabled(True)
         self.tree.blockSignals(False)
         progress.finish()
+        self._is_running = False
 
     def set_data(self, data):
         self.data = data
