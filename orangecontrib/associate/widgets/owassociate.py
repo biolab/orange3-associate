@@ -50,6 +50,7 @@ class OWAssociate(widget.OWWidget):
 
     def __init__(self):
         self.data = None
+        self._is_running = False
         self._antecedentMatch = self._consequentMatch = lambda x: True
         self.proxy_model = self.ProxyModel(self)
         table = self.table = QTableView(
@@ -240,7 +241,11 @@ class OWAssociate(widget.OWWidget):
                                             consequent.data()))
 
     def find_rules(self):
-        if self.data is None: return
+        if self.data is None:
+            return
+        if self._is_running:
+            return
+        self._is_running = True
         data = self.data
         self.table.model().clear()
 
@@ -284,62 +289,62 @@ class OWAssociate(widget.OWWidget):
         # Find itemsets
         nRules = 0
         itemsets = {}
-        progress = gui.ProgressBar(self, self.maxRules + 1)
-        for itemset, support in frequent_itemsets(X, self.minSupport / 100):
-            itemsets[itemset] = support
+        with self.progressBar(self.maxRules + 1) as progress:
+            for itemset, support in frequent_itemsets(X, self.minSupport / 100):
+                itemsets[itemset] = support
 
-            if class_items and not class_items & itemset:
-                continue
-
-            # Filter itemset by joined filters before descending into it
-            itemset_str = ' '.join(names[i] for i in itemset)
-            if (filterSearch and
-                (len(itemset) < itemsetMin or
-                 itemsetMax < len(itemset) or
-                 not isRegexMatch(itemset_str, itemset_str))):
-                continue
-
-            for rule in association_rules(itemsets,
-                                          self.minConfidence / 100,
-                                          itemset):
-                left, right, support, confidence = rule
-
-                if class_items and right - class_items:
-                    continue
-                if filterSearch and not isSizeMatch(len(left), len(right)):
-                    continue
-                left_str =  ', '.join(names[i] for i in sorted(left))
-                right_str = ', '.join(names[i] for i in sorted(right))
-                if filterSearch and not isRegexMatch(left_str, right_str):
+                if class_items and not class_items & itemset:
                     continue
 
-                # All filters matched, calculate stats and add table row
-                _, _, _, _, coverage, strength, lift, leverage = next(
-                    rules_stats((rule,), itemsets, n_examples))
+                # Filter itemset by joined filters before descending into it
+                itemset_str = ' '.join(names[i] for i in itemset)
+                if (filterSearch and
+                    (len(itemset) < itemsetMin or
+                     itemsetMax < len(itemset) or
+                     not isRegexMatch(itemset_str, itemset_str))):
+                    continue
 
-                support_item = NumericItem(support / n_examples)
-                # Set row data on first column
-                support_item.setData((itemset - class_items,
-                                      class_items and (class_items & itemset).pop()),
-                                     self.ROW_DATA_ROLE)
-                left_item = StandardItem(left_str, len(left))
-                left_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-                model.appendRow([support_item,
-                                 NumericItem(confidence),
-                                 NumericItem(coverage),
-                                 NumericItem(strength),
-                                 NumericItem(lift),
-                                 NumericItem(leverage),
-                                 left_item,
-                                 StandardItem('→'),
-                                 StandardItem(right_str, len(right))])
-                #~ scatter_agg[(round(support / n_examples, 2), round(confidence, 2))].append((left, right))
-                nRules += 1
-                progress.advance()
+                for rule in association_rules(itemsets,
+                                              self.minConfidence / 100,
+                                              itemset):
+                    left, right, support, confidence = rule
+
+                    if class_items and right - class_items:
+                        continue
+                    if filterSearch and not isSizeMatch(len(left), len(right)):
+                        continue
+                    left_str =  ', '.join(names[i] for i in sorted(left))
+                    right_str = ', '.join(names[i] for i in sorted(right))
+                    if filterSearch and not isRegexMatch(left_str, right_str):
+                        continue
+
+                    # All filters matched, calculate stats and add table row
+                    _, _, _, _, coverage, strength, lift, leverage = next(
+                        rules_stats((rule,), itemsets, n_examples))
+
+                    support_item = NumericItem(support / n_examples)
+                    # Set row data on first column
+                    support_item.setData((itemset - class_items,
+                                          class_items and (class_items & itemset).pop()),
+                                         self.ROW_DATA_ROLE)
+                    left_item = StandardItem(left_str, len(left))
+                    left_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                    model.appendRow([support_item,
+                                     NumericItem(confidence),
+                                     NumericItem(coverage),
+                                     NumericItem(strength),
+                                     NumericItem(lift),
+                                     NumericItem(leverage),
+                                     left_item,
+                                     StandardItem('→'),
+                                     StandardItem(right_str, len(right))])
+                    #~ scatter_agg[(round(support / n_examples, 2), round(confidence, 2))].append((left, right))
+                    nRules += 1
+                    progress.advance()
+                    if nRules >= self.maxRules:
+                        break
                 if nRules >= self.maxRules:
                     break
-            if nRules >= self.maxRules:
-                break
 
         # Populate the TableView
         table = self.table
@@ -352,12 +357,12 @@ class OWAssociate(widget.OWWidget):
             table.resizeColumnToContents(i)
         table.setSortingEnabled(True)
         table.setHidden(False)
-        progress.finish()
 
         self.nRules = nRules
         self.nFilteredRules = proxy_model.rowCount()  # TODO: continue; also add in owitemsets
         self.nSelectedRules = 0
         self.nSelectedExamples = 0
+        self._is_running = False
 
         #~ self.scatter_agg = scatter_agg
         #~ self.scatter_button.setDisabled(not nRules)
@@ -450,6 +455,7 @@ class OWAssociate(widget.OWWidget):
 
     def set_data(self, data):
         self.data = data
+        is_error = False
         if data is not None:
             if not data.domain.has_discrete_class:
                 self.cb_classify.setDisabled(True)
@@ -461,15 +467,16 @@ class OWAssociate(widget.OWWidget):
             if issparse(data.X):
                 self.X = data.X.tocsc()
             else:
-                if data.domain.has_continuous_attributes():
-                    self.warning(0, 'Data has continuous attributes which will be skipped.')
                 if not data.domain.has_discrete_attributes():
                     self.error(1, 'Discrete features required but data has none.')
+                    is_error = True
                     self.button.setDisabled(True)
+                elif data.domain.has_continuous_attributes():
+                    self.warning(0, 'Data has continuous attributes which will be skipped.')
         else:
             self.output = None
             self.commit()
-        if self.autoFind:
+        if self.autoFind and not is_error:
             self.find_rules()
 
 
