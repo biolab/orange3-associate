@@ -228,51 +228,51 @@ class OWItemsets(widget.OWWidget):
         isRegexMatch = self.isRegexMatch
 
         # Find itemsets and populate the TreeView
-        progress = gui.ProgressBar(self, self.maxItemsets + 1)
-        for itemset, support in frequent_itemsets(X, self.minSupport / 100):
+        with self.progressBar(self.maxItemsets + 1) as progress:
+            for itemset, support in frequent_itemsets(X, self.minSupport / 100):
 
-            if filterSearch and not filterMinItems <= len(itemset) <= filterMaxItems:
-                continue
+                if filterSearch and not filterMinItems <= len(itemset) <= filterMaxItems:
+                    continue
 
-            parent = top
-            first_new_item = None
-            itemset_matches_filter = False
+                parent = top
+                first_new_item = None
+                itemset_matches_filter = False
 
-            for item in sorted(itemset):
-                name = names[item]
+                for item in sorted(itemset):
+                    name = names[item]
+
+                    if filterSearch and not itemset_matches_filter:
+                        itemset_matches_filter = isRegexMatch(name)
+
+                    child = parent.get(name)
+                    if child is None:
+                        try:
+                            wi = self.TreeWidgetItem(
+                                parent.item,
+                                [name, str(support), '{:.4g}'.format(100 * support / len(data))])
+                        except RuntimeError:
+                            # FIXME: When autoFind was in effect and the support
+                            # slider was moved, this line excepted with:
+                            #     RuntimeError: wrapped C/C++ object of type
+                            #                   TreeWidgetItem has been deleted
+                            return
+                        wi.setData(0, self.ITEM_DATA_ROLE, item)
+                        child = parent[name] = ItemDict(wi)
+
+                        if first_new_item is None:
+                            first_new_item = (parent, name)
+                    parent = child
 
                 if filterSearch and not itemset_matches_filter:
-                    itemset_matches_filter = isRegexMatch(name)
-
-                child = parent.get(name)
-                if child is None:
-                    try:
-                        wi = self.TreeWidgetItem(
-                            parent.item,
-                            [name, str(support), '{:.4g}'.format(100 * support / len(data))])
-                    except RuntimeError:
-                        # FIXME: When autoFind was in effect and the support
-                        # slider was moved, this line excepted with:
-                        #     RuntimeError: wrapped C/C++ object of type
-                        #                   TreeWidgetItem has been deleted
-                        return
-                    wi.setData(0, self.ITEM_DATA_ROLE, item)
-                    child = parent[name] = ItemDict(wi)
-
-                    if first_new_item is None:
-                        first_new_item = (parent, name)
-                parent = child
-
-            if filterSearch and not itemset_matches_filter:
-                parent, name = first_new_item
-                parent.item.removeChild(parent[name].item)
-                del parent[name].item
-                del parent[name]
-            else:
-                nItemsets += 1
-                progress.advance()
-            if nItemsets >= self.maxItemsets:
-                break
+                    parent, name = first_new_item
+                    parent.item.removeChild(parent[name].item)
+                    del parent[name].item
+                    del parent[name]
+                else:
+                    nItemsets += 1
+                    progress.advance()
+                if nItemsets >= self.maxItemsets:
+                    break
 
         if not filterSearch:
             self.filter_change()
@@ -284,7 +284,6 @@ class OWItemsets(widget.OWWidget):
             self.tree.resizeColumnToContents(i)
         self.tree.setUpdatesEnabled(True)
         self.tree.blockSignals(False)
-        progress.finish()
         self._is_running = False
 
     def set_data(self, data):
