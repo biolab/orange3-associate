@@ -23,6 +23,10 @@ ENTRY_POINTS = {
         #    orangecontrib/datafusion/widgets/__init__.py
         'Associate = orangecontrib.associate.widgets',
     ),
+
+    # Register widget help
+    "orange.canvas.help": (
+        'html-index = orangecontrib.associate.widgets:WIDGET_HELP_PATH',),
 }
 
 def do_setup(ext_modules):
