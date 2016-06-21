@@ -18,11 +18,10 @@ Widgets
 Scripting
 ------------
 
- .. toctree::
+.. toctree::
    :maxdepth: 1
 
- .. automodule:: fpgrowth
-   :members:
+   scripting.rst
 
 Indices and tables
 ==================

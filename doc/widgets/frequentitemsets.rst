@@ -8,13 +8,15 @@ Finds frequent itemsets in the data.
 Signals
 -------
 
-#### Inputs:
+Inputs
+~~~~~~
 
 -  **Data**
 
    Data set
 
-#### Outputs:
+Outputs
+~~~~~~~
 
 -  **Matching Data**
 
