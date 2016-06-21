@@ -289,6 +289,7 @@ class OWItemsets(widget.OWWidget):
 
     def set_data(self, data):
         self.data = data
+        is_error = False
         if data is not None:
             self.warning(0)
             self.error(1)
@@ -297,15 +298,16 @@ class OWItemsets(widget.OWWidget):
             if issparse(data.X):
                 self.X = data.X.tocsc()
             else:
-                if data.domain.has_continuous_attributes():
-                    self.warning(0, 'Data has continuous attributes which will be skipped.')
                 if not data.domain.has_discrete_attributes():
                     self.error(1, 'Discrete features required but data has none.')
+                    is_error = True
                     self.button.setDisabled(True)
+                elif data.domain.has_continuous_attributes():
+                    self.warning(0, 'Data has continuous attributes which will be skipped.')
         else:
             self.output = None
             self.commit()
-        if self.autoFind:
+        if self.autoFind and not is_error:
             self.find_itemsets()
 
 
