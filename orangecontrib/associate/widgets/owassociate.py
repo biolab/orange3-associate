@@ -241,7 +241,7 @@ class OWAssociate(widget.OWWidget):
                                             consequent.data()))
 
     def find_rules(self):
-        if self.data is None:
+        if self.data is None or not len(self.data):
             return
         if self._is_running:
             return
@@ -259,6 +259,10 @@ class OWAssociate(widget.OWWidget):
         isRegexMatch = self.isRegexMatch
 
         X, mapping = OneHot.encode(data, self.classify)
+        self.error(911)
+        if X is None:
+            self.error(911, 'Need some discrete data to work with.')
+
         self.onehot_mapping = mapping
         ITEM_FMT = '{}' if issparse(data.X) else '{}={}'
         names = {item: ('{}={}' if var is data.domain.class_var else ITEM_FMT).format(var.name, val)

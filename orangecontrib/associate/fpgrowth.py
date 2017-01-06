@@ -639,7 +639,7 @@ class OneHot:
                     encoded.append(table.Y == j)
 
         if not issparse(X):
-            encoded = np.column_stack(encoded)
+            encoded = np.column_stack(encoded) if encoded else None
         return encoded, mapping
 
     @staticmethod

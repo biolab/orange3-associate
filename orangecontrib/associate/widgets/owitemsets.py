@@ -200,7 +200,7 @@ class OWItemsets(widget.OWWidget):
             return ' '.join(reversed(tooltip))
 
     def find_itemsets(self):
-        if self.data is None:
+        if self.data is None or not len(self.data):
             return
         if self._is_running:
             return
@@ -217,6 +217,10 @@ class OWItemsets(widget.OWWidget):
 
         top = ItemDict(self.tree.invisibleRootItem())
         X, mapping = OneHot.encode(data)
+        self.error(911)
+        if X is None:
+            self.error(911, 'Need some discrete data to work with.')
+
         self.onehot_mapping = mapping
         ITEM_FMT = '{}' if issparse(data.X) else '{}={}'
         names = {item: ITEM_FMT.format(var.name, val)
