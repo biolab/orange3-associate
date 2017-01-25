@@ -90,7 +90,7 @@ class OWAssociate(widget.OWWidget):
         self.cb_classify = gui.checkBox(
             box, self, 'classify', label='Induce classification (itemset → class) rules')
         self.button = gui.auto_commit(
-                box, self, 'autoFind', 'Find rules', commit=self.find_rules)
+                box, self, 'autoFind', 'Find rules', callback=self.find_rules)
 
         vbox = gui.widgetBox(self.controlArea, 'Filter rules')
 
