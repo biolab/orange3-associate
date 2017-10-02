@@ -7,10 +7,8 @@ from scipy.sparse import issparse
 from Orange.data import Table
 from Orange.widgets import widget, gui, settings
 
-from PyQt4.QtCore import Qt
-from PyQt4.QtGui import (
-    QApplication, QTreeWidget, QTreeWidgetItem,
-    QItemSelection, QItemSelectionModel)
+from AnyQt.QtCore import Qt, QItemSelection, QItemSelectionModel
+from AnyQt.QtWidgets import QApplication, QTreeWidget, QTreeWidgetItem
 
 from orangecontrib.associate.fpgrowth import frequent_itemsets, OneHot
 
