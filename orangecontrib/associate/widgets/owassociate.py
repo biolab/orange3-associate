@@ -9,12 +9,10 @@ from Orange.data import Table
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraph
 
-from PyQt4.QtCore import Qt, QSize, pyqtSignal, QRectF
-from PyQt4.QtGui import (
-    QApplication, QLabel, QTableView, QStandardItem, QStandardItemModel,
-    QSortFilterProxyModel, QMainWindow, QMouseEvent, QGraphicsView,
-    QPen, QBrush, QColor)
-
+from AnyQt.QtCore import Qt, QSize, pyqtSignal, QRectF, QSortFilterProxyModel
+from AnyQt.QtGui import (
+    QApplication, QStandardItem, QStandardItemModel, QMouseEvent, QPen, QBrush, QColor)
+from AnyQt.QtWidgets import QLabel, QTableView, QMainWindow, QGraphicsView
 
 from orangecontrib.associate.fpgrowth import frequent_itemsets, OneHot, association_rules, rules_stats
 
