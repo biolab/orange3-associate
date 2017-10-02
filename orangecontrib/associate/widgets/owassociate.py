@@ -8,6 +8,7 @@ from scipy.sparse import issparse
 from Orange.data import Table
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraph
+from Orange.widgets.widget import Input, Output
 
 from AnyQt.QtCore import Qt, QSize, pyqtSignal, QRectF, QSortFilterProxyModel
 from AnyQt.QtGui import (
@@ -19,18 +20,17 @@ from orangecontrib.associate.fpgrowth import frequent_itemsets, OneHot, associat
 import pyqtgraph as pg
 
 
-class Output:
-    DATA = 'Matching data'
-
-
 class OWAssociate(widget.OWWidget):
     name = 'Association Rules'
     description = 'Induce association rules from data.'
     icon = 'icons/AssociationRules.svg'
     priority = 20
 
-    inputs = [("Data", Table, 'set_data')]
-    outputs = [(Output.DATA, Table)]
+    class Inputs:
+        data = Input("Data", Table)
+
+    class Outputs:
+        matching_data = Output("Matching Data", Table)
 
     class Error(widget.OWWidget.Error):
         need_discrete_data = widget.Msg("Need some discrete data to work with.")
@@ -165,7 +165,7 @@ class OWAssociate(widget.OWWidget):
         self.reportRaw(OWReport.reportTree(self.tree))
 
     def commit(self):
-        self.send(Output.DATA, self.output)
+        self.Outputs.matching_data.send(self.output)
 
     def isSizeMatch(self, antecedentSize, consequentSize):
         return (self.filterAntecedentMin <= antecedentSize <= self.filterAntecedentMax and
@@ -462,6 +462,7 @@ class OWAssociate(widget.OWWidget):
         self.scatter.plot.setRange(xRange=(0, 1), yRange=(0, 1))
         self.scatter.show()
 
+    @Inputs.data
     def set_data(self, data):
         self.data = data
         is_error = False
