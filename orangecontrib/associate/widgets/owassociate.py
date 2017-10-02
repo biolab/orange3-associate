@@ -34,6 +34,14 @@ class OWAssociate(widget.OWWidget):
     inputs = [("Data", Table, 'set_data')]
     outputs = [(Output.DATA, Table)]
 
+    class Error(widget.OWWidget.Error):
+        need_discrete_data = widget.Msg("Need some discrete data to work with.")
+        no_disc_features = widget.Msg("Discrete features required but data has none.")
+
+    class Warning(widget.OWWidget.Warning):
+        cont_attrs = widget.Msg("Data has continuous attributes which will be skipped.")
+        err_reg_expression = widget.Msg("Error in {} regular expression: {}")
+
     minSupport = settings.Setting(30)
     minConfidence = settings.Setting(95)
     maxRules = settings.Setting(10000)
@@ -169,8 +177,7 @@ class OWAssociate(widget.OWWidget):
                 self._consequentMatch(consequentStr))
 
     def filter_change(self):
-        self.warning(9)
-        WARNING = 'Error in {} regular expression: {}'
+        self.Warning.err_reg_expression.clear()
         try:
             self._antecedentMatch = re.compile(
                 '|'.join(i.strip()
@@ -178,7 +185,7 @@ class OWAssociate(widget.OWWidget):
                                            self.filterKeywordsAntecedent.strip())
                          if i.strip()), re.IGNORECASE).search
         except Exception as e:
-            self.warning(9, WARNING.format('antecedent', e.args[0]))
+            self.Warning.err_reg_expression('antecedent', e.args[0])
             self._antecedentMatch = lambda x: True
         try:
             self._consequentMatch = re.compile(
@@ -187,7 +194,7 @@ class OWAssociate(widget.OWWidget):
                                            self.filterKeywordsConsequent.strip())
                          if i.strip()), re.IGNORECASE).search
         except Exception as e:
-            self.warning(9, WARNING.format('consequent', e.args[0]))
+            self.Warning.err_reg_expression('consequent', e.args[0])
             self._consequentMatch = lambda x: True
         self.proxy_model.invalidateFilter()
         self.nFilteredRules = self.proxy_model.rowCount()
@@ -259,9 +266,9 @@ class OWAssociate(widget.OWWidget):
         isRegexMatch = self.isRegexMatch
 
         X, mapping = OneHot.encode(data, self.classify)
-        self.error(911)
+        self.Error.need_discrete_data.clear()
         if X is None:
-            self.error(911, 'Need some discrete data to work with.')
+            self.Error.need_discrete_data()
 
         self.onehot_mapping = mapping
         ITEM_FMT = '{}' if issparse(data.X) else '{}={}'
@@ -465,18 +472,18 @@ class OWAssociate(widget.OWWidget):
                 self.cb_classify.setDisabled(True)
                 self.classify = False
             self.X = data.X
-            self.warning(0)
-            self.error(1)
+            self.Warning.cont_attrs.clear()
+            self.Error.no_disc_features.clear()
             self.button.setDisabled(False)
             if issparse(data.X):
                 self.X = data.X.tocsc()
             else:
                 if not data.domain.has_discrete_attributes():
-                    self.error(1, 'Discrete features required but data has none.')
+                    self.Error.no_disc_features()
                     is_error = True
                     self.button.setDisabled(True)
                 elif data.domain.has_continuous_attributes():
-                    self.warning(0, 'Data has continuous attributes which will be skipped.')
+                    self.Warning.cont_attrs()
         else:
             self.output = None
             self.commit()
