@@ -6,15 +6,12 @@ from scipy.sparse import issparse
 
 from Orange.data import Table
 from Orange.widgets import widget, gui, settings
+from Orange.widgets.widget import Input, Output
 
 from AnyQt.QtCore import Qt, QItemSelection, QItemSelectionModel
 from AnyQt.QtWidgets import QApplication, QTreeWidget, QTreeWidgetItem
 
 from orangecontrib.associate.fpgrowth import frequent_itemsets, OneHot
-
-
-class Output:
-    DATA = 'Matching data'
 
 
 class OWItemsets(widget.OWWidget):
@@ -23,8 +20,11 @@ class OWItemsets(widget.OWWidget):
     icon = 'icons/FrequentItemsets.svg'
     priority = 10
 
-    inputs = [("Data", Table, 'set_data')]
-    outputs = [(Output.DATA, Table)]
+    class Inputs:
+        data = Input("Data", Table)
+
+    class Outputs:
+        matching_data = Output("Matching Data", Table)
 
     class Error(widget.OWWidget.Error):
         need_discrete_data = widget.Msg("Need some discrete data to work with.")
@@ -168,7 +168,7 @@ class OWItemsets(widget.OWWidget):
         self.commit()
 
     def commit(self):
-        self.send(Output.DATA, self.output)
+        self.Outputs.matching_data.send(self.output)
 
     def filter_change(self):
         self.Warning.err_reg_expression.clear()
@@ -296,6 +296,7 @@ class OWItemsets(widget.OWWidget):
         self.tree.blockSignals(False)
         self._is_running = False
 
+    @Inputs.data
     def set_data(self, data):
         self.data = data
         is_error = False
