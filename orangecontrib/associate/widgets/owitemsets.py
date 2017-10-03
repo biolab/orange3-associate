@@ -6,17 +6,12 @@ from scipy.sparse import issparse
 
 from Orange.data import Table
 from Orange.widgets import widget, gui, settings
+from Orange.widgets.widget import Input, Output
 
-from PyQt4.QtCore import Qt
-from PyQt4.QtGui import (
-    QApplication, QTreeWidget, QTreeWidgetItem,
-    QItemSelection, QItemSelectionModel)
+from AnyQt.QtCore import Qt, QItemSelection, QItemSelectionModel
+from AnyQt.QtWidgets import QApplication, QTreeWidget, QTreeWidgetItem
 
 from orangecontrib.associate.fpgrowth import frequent_itemsets, OneHot
-
-
-class Output:
-    DATA = 'Matching data'
 
 
 class OWItemsets(widget.OWWidget):
@@ -25,8 +20,19 @@ class OWItemsets(widget.OWWidget):
     icon = 'icons/FrequentItemsets.svg'
     priority = 10
 
-    inputs = [("Data", Table, 'set_data')]
-    outputs = [(Output.DATA, Table)]
+    class Inputs:
+        data = Input("Data", Table)
+
+    class Outputs:
+        matching_data = Output("Matching Data", Table)
+
+    class Error(widget.OWWidget.Error):
+        need_discrete_data = widget.Msg("Need some discrete data to work with.")
+        no_disc_features = widget.Msg("Discrete features required but data has none.")
+
+    class Warning(widget.OWWidget.Warning):
+        cont_attrs = widget.Msg("Data has continuous attributes which will be skipped.")
+        err_reg_expression = widget.Msg("Error in regular expression: {}")
 
     minSupport = settings.Setting(30)
     maxItemsets = settings.Setting(10000)
@@ -162,17 +168,17 @@ class OWItemsets(widget.OWWidget):
         self.commit()
 
     def commit(self):
-        self.send(Output.DATA, self.output)
+        self.Outputs.matching_data.send(self.output)
 
     def filter_change(self):
-        self.warning(9)
+        self.Warning.err_reg_expression.clear()
         try:
             isRegexMatch = self.isRegexMatch = re.compile(
                 '|'.join(i.strip()
                          for i in re.split('(,|\s)+', self.filterKeywords.strip())
                          if i.strip()), re.IGNORECASE).search
         except Exception as e:
-            self.warning(9, 'Error in regular expression: {}'.format(e.args[0]))
+            self.Warning.err_reg_expression(e.args[0])
             isRegexMatch = self.isRegexMatch = lambda x: True
 
         def hide(node, depth, has_kw):
@@ -217,9 +223,9 @@ class OWItemsets(widget.OWWidget):
 
         top = ItemDict(self.tree.invisibleRootItem())
         X, mapping = OneHot.encode(data)
-        self.error(911)
+        self.Error.need_discrete_data.clear()
         if X is None:
-            self.error(911, 'Need some discrete data to work with.')
+            self.Error.need_discrete_data()
 
         self.onehot_mapping = mapping
         ITEM_FMT = '{}' if issparse(data.X) else '{}={}'
@@ -290,23 +296,24 @@ class OWItemsets(widget.OWWidget):
         self.tree.blockSignals(False)
         self._is_running = False
 
+    @Inputs.data
     def set_data(self, data):
         self.data = data
         is_error = False
         if data is not None:
-            self.warning(0)
-            self.error(1)
+            self.Warning.cont_attrs.clear()
+            self.Error.no_disc_features.clear()
             self.button.setDisabled(False)
             self.X = data.X
             if issparse(data.X):
                 self.X = data.X.tocsc()
             else:
                 if not data.domain.has_discrete_attributes():
-                    self.error(1, 'Discrete features required but data has none.')
+                    self.Error.no_disc_features()
                     is_error = True
                     self.button.setDisabled(True)
                 elif data.domain.has_continuous_attributes():
-                    self.warning(0, 'Data has continuous attributes which will be skipped.')
+                    self.Warning.cont_attrs()
         else:
             self.output = None
             self.commit()
