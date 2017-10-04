@@ -203,7 +203,7 @@ class OWItemsets(widget.OWWidget):
             while self:
                 tooltip.append(self.text(0))
                 self = self.parent()
-            return ' '.join(reversed(tooltip))
+            return '\n'.join(reversed(tooltip))
 
     def find_itemsets(self):
         if self.data is None or not len(self.data):
