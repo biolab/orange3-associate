@@ -96,7 +96,8 @@ class OWAssociate(widget.OWWidget):
         self.cb_classify = gui.checkBox(
             box, self, 'classify', label='Induce classification (itemset → class) rules')
         self.button = gui.auto_commit(
-                box, self, 'autoFind', 'Find rules', commit=self.find_rules)
+                box, self, 'autoFind', 'Find rules', commit=self.find_rules,
+                callback=self.find_rules_checked)
 
         vbox = gui.widgetBox(self.controlArea, 'Filter rules')
 
@@ -244,6 +245,10 @@ class OWAssociate(widget.OWWidget):
                                            consequent.data(OWAssociate.ITEM_DATA_ROLE)) and
                         widget.isRegexMatch(antecedent.data(),
                                             consequent.data()))
+
+    def find_rules_checked(self):
+        if self.controls.autoFind.isChecked():
+            self.find_rules()
 
     def find_rules(self):
         if self.data is None or not len(self.data):
