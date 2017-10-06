@@ -87,7 +87,8 @@ class OWItemsets(widget.OWWidget):
                     label='Max. number of itemsets:', labelFormat="%d",
                     callback=lambda: self.find_itemsets())
         self.button = gui.auto_commit(
-            box, self, 'autoFind', 'Find itemsets', commit=self.find_itemsets)
+            box, self, 'autoFind', 'Find itemsets', commit=self.find_itemsets,
+            callback=lambda: self.autoFind and self.find_itemsets())
 
         box = gui.widgetBox(self.controlArea, 'Filter itemsets')
         gui.lineEdit(box, self, 'filterKeywords', 'Contains:',
@@ -203,7 +204,7 @@ class OWItemsets(widget.OWWidget):
             while self:
                 tooltip.append(self.text(0))
                 self = self.parent()
-            return ' '.join(reversed(tooltip))
+            return '\n'.join(reversed(tooltip))
 
     def find_itemsets(self):
         if self.data is None or not len(self.data):
