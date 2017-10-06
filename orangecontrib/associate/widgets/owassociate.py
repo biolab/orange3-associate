@@ -40,8 +40,8 @@ class OWAssociate(widget.OWWidget):
         cont_attrs = widget.Msg("Data has continuous attributes which will be skipped.")
         err_reg_expression = widget.Msg("Error in {} regular expression: {}")
 
-    minSupport = settings.Setting(30)
-    minConfidence = settings.Setting(95)
+    minSupport = settings.Setting(1)
+    minConfidence = settings.Setting(90)
     maxRules = settings.Setting(10000)
     filterSearch = settings.Setting(True)
     classify = settings.Setting(False)
