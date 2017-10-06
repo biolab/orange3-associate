@@ -56,10 +56,45 @@ class OWAssociate(widget.OWWidget):
 
     def __init__(self):
         self.data = None
+        self.output = None
+        self.onehot_mapping = {}
         self._is_running = False
         self._antecedentMatch = self._consequentMatch = lambda x: True
         self.proxy_model = self.ProxyModel(self)
-        table = self.table = QTableView(
+
+        owwidget = self
+
+        class TableView(QTableView):
+            def selectionChanged(self, selected, deselected):
+                nonlocal owwidget
+                super().selectionChanged(selected, deselected)
+
+                mapping = owwidget.onehot_mapping
+                if not mapping:
+                    return
+
+                where = np.where
+                X, Y = owwidget.X, owwidget.data.Y
+                instances = set()
+                selected_rows = self.selectionModel().selectedRows(0)
+                for model_index in selected_rows:
+                    itemset, class_item = model_index.data(owwidget.ROW_DATA_ROLE)
+                    cols, vals = zip(*(mapping[i] for i in itemset))
+                    if issparse(X):
+                        matching = (len(cols) == np.bincount((X[:, cols] != 0).indices,
+                                                             minlength=X.shape[0])).nonzero()[0]
+                    else:
+                        matching = set(where((X[:, cols] == vals).all(axis=1))[0])
+                    if class_item:
+                        matching &= set(where(Y == mapping[class_item][1])[0])
+                    instances.update(matching)
+
+                owwidget.nSelectedExamples = len(instances)
+                owwidget.nSelectedRules = len(selected_rows)
+                owwidget.output = owwidget.data[sorted(instances)] or None
+                owwidget.commit()
+
+        table = self.table = TableView(
             self,
             showGrid=False,
             sortingEnabled=True,
@@ -73,7 +108,6 @@ class OWAssociate(widget.OWWidget):
         table.verticalHeader().setDefaultSectionSize(table.verticalHeader().minimumSectionSize())
         table.horizontalHeader().setStretchLastSection(True)
         table.setModel(QStandardItemModel(table))
-        table.selectionChanged = self.selectionChanged
         self.mainArea.layout().addWidget(table)
 
         box = gui.widgetBox(self.controlArea, "Info")
@@ -200,42 +234,22 @@ class OWAssociate(widget.OWWidget):
     ITEM_DATA_ROLE = Qt.UserRole + 1
     ROW_DATA_ROLE = ITEM_DATA_ROLE + 1
 
-    def selectionChanged(self, selected, deselected):
-        self.table.__class__.selectionChanged(self.table, selected, deselected)
-        mapping = self.onehot_mapping
-        where = np.where
-        X, Y = self.X, self.data.Y
-        instances = set()
-        selected_rows = self.table.selectionModel().selectedRows(0)
-        for model_index in selected_rows:
-            itemset, class_item = model_index.data(self.ROW_DATA_ROLE)
-            cols, vals = zip(*(mapping[i] for i in itemset))
-            if issparse(X):
-                matching = (len(cols) == np.bincount((X[:, cols] != 0).indices,
-                                                     minlength=X.shape[0])).nonzero()[0]
-            else:
-                matching = set(where((X[:, cols] == vals).all(axis=1))[0])
-            if class_item:
-                matching &= set(where(Y == mapping[class_item][1])[0])
-            instances.update(matching)
-
-        self.nSelectedExamples = len(instances)
-        self.nSelectedRules = len(selected_rows)
-        self.output = self.data[sorted(instances)] or None
-        self.commit()
-
     class StandardItem(QStandardItem):
         def __init__(self, text, data=None):
             super().__init__(text)
-            if data: self.setData(data, OWAssociate.ITEM_DATA_ROLE)
+            if data:
+                self.setData(data, OWAssociate.ITEM_DATA_ROLE)
 
     class NumericItem(StandardItem):
         def __init__(self, data):
-            super().__init__('{:.2f}'.format(data), data)
-        def __lt__(self, other):
-            return self.data() < other.data()
+            super().__init__('{:2.3f}'.format(data), data)
+            self.setToolTip(str(data))
+            self.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
     class ProxyModel(QSortFilterProxyModel):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs, sortRole=OWAssociate.ITEM_DATA_ROLE)
+
         def filterAcceptsRow(self, row, parent):
             widget = self.parent()
             antecedent = self.sourceModel().index(row, 6, parent)
@@ -298,6 +312,8 @@ class OWAssociate(widget.OWWidget):
         # Find itemsets
         nRules = 0
         itemsets = {}
+        ARROW_ITEM = StandardItem('→')
+        ARROW_ITEM.setTextAlignment(Qt.AlignCenter)
         with self.progressBar(self.maxRules + 1) as progress:
             for itemset, support in frequent_itemsets(X, self.minSupport / 100):
                 itemsets[itemset] = support
@@ -345,7 +361,7 @@ class OWAssociate(widget.OWWidget):
                                      NumericItem(lift),
                                      NumericItem(leverage),
                                      left_item,
-                                     StandardItem('→'),
+                                     ARROW_ITEM.clone(),
                                      StandardItem(right_str, len(right))])
                     #~ scatter_agg[(round(support / n_examples, 2), round(confidence, 2))].append((left, right))
                     nRules += 1
