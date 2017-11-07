@@ -9,7 +9,7 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.widget import Input, Output
 
 from AnyQt.QtCore import Qt, QItemSelection, QItemSelectionModel
-from AnyQt.QtWidgets import QApplication, QTreeWidget, QTreeWidgetItem
+from AnyQt.QtWidgets import QApplication, QTreeWidget, QTreeWidgetItem, qApp
 
 from orangecontrib.associate.fpgrowth import frequent_itemsets, OneHot
 
@@ -87,7 +87,7 @@ class OWItemsets(widget.OWWidget):
                     label='Max. number of itemsets:', labelFormat="%d",
                     callback=lambda: self.find_itemsets())
         self.button = gui.auto_commit(
-            box, self, 'autoFind', 'Find itemsets', commit=self.find_itemsets,
+            box, self, 'autoFind', 'Find Itemsets', commit=self.find_itemsets,
             callback=lambda: self.autoFind and self.find_itemsets())
 
         box = gui.widgetBox(self.controlArea, 'Filter itemsets')
@@ -210,8 +210,11 @@ class OWItemsets(widget.OWWidget):
         if self.data is None or not len(self.data):
             return
         if self._is_running:
+            self._is_running = False
             return
         self._is_running = True
+
+        self.button.button.setText('Cancel')
 
         data = self.data
         self.tree.clear()
@@ -282,8 +285,11 @@ class OWItemsets(widget.OWWidget):
                 else:
                     nItemsets += 1
                     progress.advance()
-                if nItemsets >= self.maxItemsets:
+
+                if not self._is_running or nItemsets >= self.maxItemsets:
                     break
+
+                qApp.processEvents()
 
         if not filterSearch:
             self.filter_change()
@@ -296,6 +302,7 @@ class OWItemsets(widget.OWWidget):
         self.tree.setUpdatesEnabled(True)
         self.tree.blockSignals(False)
         self._is_running = False
+        self.button.button.setText('Find Itemsets')
 
     @Inputs.data
     def set_data(self, data):
