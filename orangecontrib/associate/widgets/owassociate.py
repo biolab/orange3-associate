@@ -190,14 +190,12 @@ class OWAssociate(widget.OWWidget):
 
         self.filter_change()
 
-    def sendReport(self):
-        self.reportSettings("Itemset statistics",
-                            [("Number of itemsets", self.nRules),
-                             ("Selected itemsets", self.nSelectedItemsets),
-                             ("Covered examples", self.nSelectedExamples),
-                             ])
-        self.reportSection("Itemsets")
-        self.reportRaw(OWReport.reportTree(self.tree))
+    def send_report(self):
+        self.report_items([("Number of rules", self.nRules),
+                           ("Selected rules", self.nSelectedRules),
+                           ("Covered examples", self.nSelectedExamples),
+                           ])
+        self.report_table('Rules', self.table)
 
     def commit(self):
         self.Outputs.matching_data.send(self.output)
