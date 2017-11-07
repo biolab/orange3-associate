@@ -13,7 +13,7 @@ from Orange.widgets.widget import Input, Output
 from AnyQt.QtCore import Qt, QSize, pyqtSignal, QRectF, QSortFilterProxyModel
 from AnyQt.QtGui import (
     QApplication, QStandardItem, QStandardItemModel, QMouseEvent, QPen, QBrush, QColor)
-from AnyQt.QtWidgets import QLabel, QTableView, QMainWindow, QGraphicsView
+from AnyQt.QtWidgets import QLabel, QTableView, QMainWindow, QGraphicsView, qApp
 
 from orangecontrib.associate.fpgrowth import frequent_itemsets, OneHot, association_rules, rules_stats
 
@@ -130,7 +130,7 @@ class OWAssociate(widget.OWWidget):
         self.cb_classify = gui.checkBox(
             box, self, 'classify', label='Induce classification (itemset → class) rules')
         self.button = gui.auto_commit(
-                box, self, 'autoFind', 'Find rules', commit=self.find_rules,
+                box, self, 'autoFind', 'Find Rules', commit=self.find_rules,
                 callback=lambda: self.autoFind and self.find_rules())
 
         vbox = gui.widgetBox(self.controlArea, 'Filter rules')
@@ -190,14 +190,12 @@ class OWAssociate(widget.OWWidget):
 
         self.filter_change()
 
-    def sendReport(self):
-        self.reportSettings("Itemset statistics",
-                            [("Number of itemsets", self.nRules),
-                             ("Selected itemsets", self.nSelectedItemsets),
-                             ("Covered examples", self.nSelectedExamples),
-                             ])
-        self.reportSection("Itemsets")
-        self.reportRaw(OWReport.reportTree(self.tree))
+    def send_report(self):
+        self.report_items([("Number of rules", self.nRules),
+                           ("Selected rules", self.nSelectedRules),
+                           ("Covered examples", self.nSelectedExamples),
+                           ])
+        self.report_table('Rules', self.table)
 
     def commit(self):
         self.Outputs.matching_data.send(self.output)
@@ -264,7 +262,11 @@ class OWAssociate(widget.OWWidget):
         if self.data is None or not len(self.data):
             return
         if self._is_running:
+            self._is_running = False
             return
+
+        self.button.button.setText('Cancel')
+
         self._is_running = True
         data = self.data
         self.table.model().clear()
@@ -367,9 +369,13 @@ class OWAssociate(widget.OWWidget):
                     #~ scatter_agg[(round(support / n_examples, 2), round(confidence, 2))].append((left, right))
                     nRules += 1
                     progress.advance()
-                    if nRules >= self.maxRules:
+
+                    if not self._is_running or nRules >= self.maxRules:
                         break
-                if nRules >= self.maxRules:
+
+                qApp.processEvents()
+
+                if not self._is_running or nRules >= self.maxRules:
                     break
 
         # Populate the TableView
@@ -383,6 +389,8 @@ class OWAssociate(widget.OWWidget):
             table.resizeColumnToContents(i)
         table.setSortingEnabled(True)
         table.setHidden(False)
+
+        self.button.button.setText('Find Rules')
 
         self.nRules = nRules
         self.nFilteredRules = proxy_model.rowCount()  # TODO: continue; also add in owitemsets
