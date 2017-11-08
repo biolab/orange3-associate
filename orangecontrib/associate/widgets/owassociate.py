@@ -247,7 +247,7 @@ class OWAssociate(widget.OWWidget):
 
     class ProxyModel(QSortFilterProxyModel):
         def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs, sortRole=OWAssociate.ITEM_DATA_ROLE)
+            super().__init__(*args, sortRole=OWAssociate.ITEM_DATA_ROLE, **kwargs)
 
         def filterAcceptsRow(self, row, parent):
             widget = self.parent()
