@@ -56,6 +56,7 @@ class OWItemsets(widget.OWWidget):
 
     def __init__(self):
         self.data = None
+        self.output = None
         self._is_running = False
         self.isRegexMatch = lambda x: True
         self.tree = QTreeWidget(self.mainArea,
