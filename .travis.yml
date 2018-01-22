@@ -1,0 +1,24 @@
+language: python
+sudo: false
+dist: trusty
+python: "3.5"
+
+cache:
+    apt: true
+    pip: true
+    ccache: true
+
+before_install:
+    - pip install -U setuptools pip wheel
+    - pip install codecov
+
+install:
+    - pip install PyQt5 AnyQt
+    - pip install Orange3
+    - travis_wait pip install -e .
+
+script:
+    - catchsegv xvfb-run -a -s "-screen 0 1280x1024x24" coverage run setup.py test
+
+after_success:
+    - codecov
