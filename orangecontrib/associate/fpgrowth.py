@@ -99,6 +99,7 @@ We want itemsets with >40% support:
 >>> len(itemsets)
 520
 
+
 The transaction-coded items corresponding to class values are:
 
 >>> class_items = {item
