@@ -95,6 +95,9 @@ array([[False,  True, ...,  True, False],
 
 We want itemsets with >40% support:
 
+>>> itemsets = dict(frequent_itemsets(X, .4))
+>>> len(itemsets)
+520
 
 
 The transaction-coded items corresponding to class values are:
