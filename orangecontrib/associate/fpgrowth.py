@@ -419,7 +419,7 @@ def frequent_itemsets(X, min_support=.2):
     """
     if not isinstance(X, (np.ndarray, spmatrix, list, Iterator)):
         raise TypeError('X must be (sparse) array of boolean values, or'
-                        'list of lists of hashable items, or iterator')
+                        'list of lists of ints, or iterator of such')
     if not (isinstance(min_support, int) and min_support > 0 or
             isinstance(min_support, float) and 0 < min_support <= 1):
         raise ValueError('min_support must be an integer number of instances,'
@@ -434,6 +434,11 @@ def frequent_itemsets(X, min_support=.2):
         X = X.tolil().rows
     elif isinstance(X, np.ndarray):
         X = (t.nonzero()[-1] for t in X)
+    elif isinstance(X, (list, tuple)):
+        is_list_of_lists = isinstance(next(iter(X), []), (list, tuple))
+        has_int_elements = isinstance(next(iter(next(filter(None, iter(X)), [])), 1), int)
+        if not is_list_of_lists or not has_int_elements:
+            raise ValueError('X must be a list of lists of int')
 
     db = ((1, transaction) for transaction in X)  # 1 is initial item support
     tree, itemsets = _fp_tree(db, min_support)
