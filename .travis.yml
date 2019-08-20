@@ -1,5 +1,4 @@
 language: python
-sudo: false
 dist: xenial
 
 matrix:
@@ -39,4 +38,3 @@ script:
 
 after_success:
     - codecov
-    
