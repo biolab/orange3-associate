@@ -1,12 +1,28 @@
 language: python
 sudo: false
-dist: trusty
-python: "3.5"
+dist: xenial
+
+matrix:
+  include:
+
+    - python: '3.7'
+      env: ORANGE="3.20.0"
+
+    - python: '3.6'
+      env: ORANGE="release"
+
+    - python: '3.7'
+      env: ORANGE="release"
+
+    - python: '3.7'
+      env: ORANGE="master"
 
 cache:
     apt: true
     pip: true
     ccache: true
+    directories:
+        - $TRAVIS_BUILD_DIR/pyqt
 
 before_install:
     - pip install -U setuptools pip wheel
@@ -14,11 +30,13 @@ before_install:
 
 install:
     - pip install PyQt5 AnyQt
-    - pip install Orange3
-    - travis_wait pip install -e .
+    - source $TRAVIS_BUILD_DIR/.travis/install_orange.sh
+    - pip install -e .
 
 script:
-    - catchsegv xvfb-run -a -s "-screen 0 1280x1024x24" coverage run setup.py test
+    - XVFBARGS="-screen 0 1280x1024x24"
+    - catchsegv xvfb-run -a -s "$XVFBARGS" coverage run -m unittest discover -v
 
 after_success:
     - codecov
+    
