@@ -1,0 +1,16 @@
+{
+"Association Rules": {
+    "title": "Association Rules",
+    "file": "/widgets/data/associationrules.md",
+    "icon": "/widgets/icons/association-rules.png",
+    "keywords": [],
+    "category": "Associate"
+    },
+ "Frequent Itemsets": {
+    "title": "Frequent Itemsets",
+    "file": "/widgets/data/frequentitemsets.md",
+    "icon": "/widgets/icons/frequent-itemsets.png",
+    "keywords": [],
+    "category": "Associate"
+    }
+ }
