@@ -1,0 +1,21 @@
+[
+ [
+  "Associate",
+  [
+   {
+    "text": "Frequent Itemsets",
+    "doc": "widgets/frequentitemsets.md",
+    "icon": "../orangecontrib/associate/widgets/icons/FrequentItemsets.svg",
+    "background": "#cccc66",
+    "keywords": []
+   },
+   {
+    "text": "Association Rules",
+    "doc": "widgets/associationrules.md",
+    "icon": "../orangecontrib/associate/widgets/icons/AssociationRules.svg.svg",
+    "background": "#cccc66",
+    "keywords": []
+   }
+  ]
+ ]
+]

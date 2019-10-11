@@ -12,8 +12,8 @@ Widgets
 .. toctree::
    :maxdepth: 1
 
-   widgets/associationrules.rst
-   widgets/frequentitemsets.rst
+   widgets/associationrules
+   widgets/frequentitemsets
 
 Scripting
 ------------
