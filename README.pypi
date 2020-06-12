@@ -1,0 +1,18 @@
+Orange3-Associate
+=================
+
+Orange add-on for enumerating frequent itemsets and association rules mining.
+
+See [documentation](http://orange3-associate.readthedocs.org/).
+
+
+Features
+--------
+#### Association Rules
+* induce association and classification rules
+* filter rules by the antecedent or consequent part
+
+#### Frequent Itemsets
+* find frequent itemsets
+* set criteria for search
+* filter the results with regular expression

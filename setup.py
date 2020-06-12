@@ -33,7 +33,8 @@ def do_setup(ext_modules):
     setup(
         name="Orange3-Associate",
         description="Orange add-on for mining frequent itemsets and association rules.",
-        long_description=open(path.join(path.dirname(__file__), 'README.rst')).read(),
+        long_description=open(path.join(path.dirname(__file__), 'README.pypi')).read(),
+        long_description_content_type='text/markdown',
         version=VERSION,
         author='Bioinformatics Laboratory, FRI UL',
         author_email='info@biolab.si',
