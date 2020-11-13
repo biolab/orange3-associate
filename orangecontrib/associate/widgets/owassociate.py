@@ -1,23 +1,18 @@
-
 import re
-from collections import defaultdict
 
 import numpy as np
 from scipy.sparse import issparse
 
 from Orange.data import Table
 from Orange.widgets import widget, gui, settings
-from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraph
 from Orange.widgets.widget import Input, Output
 
-from AnyQt.QtCore import Qt, QSize, pyqtSignal, QRectF, QSortFilterProxyModel
+from AnyQt.QtCore import Qt, QSortFilterProxyModel
 from AnyQt.QtGui import (
-    QApplication, QStandardItem, QStandardItemModel, QMouseEvent, QPen, QBrush, QColor)
-from AnyQt.QtWidgets import QLabel, QTableView, QMainWindow, QGraphicsView, qApp
+    QApplication, QStandardItem, QStandardItemModel)
+from AnyQt.QtWidgets import QTableView, qApp
 
 from orangecontrib.associate.fpgrowth import frequent_itemsets, OneHot, association_rules, rules_stats
-
-import pyqtgraph as pg
 
 
 class OWAssociate(widget.OWWidget):
@@ -134,23 +129,6 @@ class OWAssociate(widget.OWWidget):
                 callback=lambda: self.autoFind and self.find_rules())
 
         vbox = gui.widgetBox(self.controlArea, 'Filter rules')
-
-        ## This is disabled because it's hard to make a scatter plot with
-        ## selectable spots. Options:
-        ## * PyQtGraph, which doesn't support selection OOTB (+is poorly
-        ##   contrived and under-documented);
-        ## * Orange.widgets.visualize.ScatterPlotGraph, which comes without
-        ##   any documentation or comprehensible examples of use whatsoever;
-        ## * QGraphicsView, which would work, but lacks graphing features,
-        ##   namely labels, axes, ticks.
-        ##
-        ## I don't feel like pursuing any of those right now, so I am letting
-        ## it to be figured out at a later date.
-        #~ button = self.scatter_button = gui.button(vbox, self, 'Scatter plot',
-                                                  #~ callback=self.show_scatter,
-                                                  #~ autoDefault=False)
-        #~ button.setDisabled(True)
-        #~ self.scatter = self.ScatterPlotWindow(self)
 
         box = gui.widgetBox(vbox, 'Antecedent')
         gui.lineEdit(box, self, 'filterKeywordsAntecedent', 'Contains:',
@@ -309,9 +287,6 @@ class OWAssociate(widget.OWWidget):
             item.setToolTip(tooltip)
             model.setHorizontalHeaderItem(col, item)
 
-        #~ # Aggregate rules by common (support,confidence) for scatterplot
-        #~ scatter_agg = defaultdict(list)
-
         # Find itemsets
         nRules = 0
         itemsets = {}
@@ -366,7 +341,6 @@ class OWAssociate(widget.OWWidget):
                                      left_item,
                                      ARROW_ITEM.clone(),
                                      StandardItem(right_str, len(right))])
-                    #~ scatter_agg[(round(support / n_examples, 2), round(confidence, 2))].append((left, right))
                     nRules += 1
                     progress.advance()
 
@@ -397,95 +371,6 @@ class OWAssociate(widget.OWWidget):
         self.nSelectedRules = 0
         self.nSelectedExamples = 0
         self._is_running = False
-
-        #~ self.scatter_agg = scatter_agg
-        #~ self.scatter_button.setDisabled(not nRules)
-        #~ if self.scatter.isVisible():
-            #~ self.show_scatter()
-
-    class ScatterPlotWindow(QMainWindow):
-
-        class PlotWidget(pg.PlotWidget):
-            _selection = []
-            selectionChanged = pyqtSignal()
-
-            def setScatter(self, scatter):
-                self.scatter = scatter
-
-            def mousePressEvent(self, event):
-                self._start_pos = event.pos()
-                if event.button() == Qt.LeftButton:
-                    # Save the current selection and restore it on mouse{Move,Release}
-                    if not event.modifiers() & Qt.ShiftModifier:
-                        self._selection = []
-                QGraphicsView.mousePressEvent(self, event)
-            def mouseMoveEvent(self, event):
-                QGraphicsView.mouseMoveEvent(self, event)
-
-            SELECTED_PEN = QPen(QBrush(QColor('#ee3300')), .3)
-
-            def mouseReleaseEvent(self, event):
-                QGraphicsView.mouseReleaseEvent(self, event)
-                if event.button() != Qt.LeftButton:
-                    return
-                _start_pos = self.plotItem.items[0].mapFromScene(self._start_pos)
-                _end_pos = self.plotItem.items[0].mapFromScene(event.pos())
-                sx, sy = _start_pos.x(), _start_pos.y()
-                ex, ey = _end_pos.x(), _end_pos.y()
-                if sx > ex: sx, ex = ex, sx
-                if sy < ey: sy, ey = ey, sy
-                data = self.scatter.data
-                selected_indices = ((sx <= data['x']) &
-                                    (data['x'] <= ex) &
-                                    (ey <= data['y']) &
-                                    (data['y'] <= sy)).nonzero()[0]
-                self._selection.extend(selected_indices)
-
-                data['pen'][selected_indices] = self.SELECTED_PEN
-                self.scatter.points()
-                for item in data['item'][selected_indices]:
-                    item.updateItem()
-
-                print(data['data'][selected_indices])
-                # TODO: emit selectionChanged
-
-        def __init__(self, parent):
-            super().__init__(parent)
-
-            self.setWindowTitle('Association rules scatter plot')
-            scatter = self.scatter = pg.ScatterPlotItem(size=5, symbol='s', pen=pg.mkPen(None))
-            plot = self.plot = self.PlotWidget(background='w',
-                                               labels=dict(left='Confidence',
-                                                           bottom='Support'))
-            plot.setScatter(scatter)
-            plot.setLimits(xMin=0, xMax=1.02, yMin=0, yMax=1.02,
-                           minXRange=0.5, minYRange=0.5)
-            self.setCentralWidget(plot)
-            plot.addItem(scatter)
-            plot.hideButtons()
-            self.lastClicked = []
-            scatter.sigClicked.connect(self.clicked)
-
-        def clicked(self, plot, points):
-            for p in self.lastClicked:
-                p.resetPen()
-            for p in points:
-                p.setPen(self.plot.SELECTED_PEN)
-            lastClicked = points
-
-        def sizeHint(self, hint=QSize(400, 400)):
-            return hint
-
-
-    def show_scatter(self):
-        spots = [dict(pos=pos,
-                      data=rules,
-                      brush=pg.mkColor(np.clip(1/len(rules), 0, .8)),
-                      pen=pg.mkColor(np.clip(1/len(rules), .1, .8) - .1))
-                 for pos, rules in self.scatter_agg.items()]
-        self.scatter.scatter.setData(spots=spots)
-        self.scatter.plot.setRange(xRange=(0, 1), yRange=(0, 1))
-        self.scatter.show()
 
     @Inputs.data
     def set_data(self, data):
