@@ -160,7 +160,7 @@ class OWAssociate(widget.OWWidget):
         hbox = gui.widgetBox(box, orientation='horizontal')
         gui.spin(hbox, self, 'filterAntecedentMin', 1, 998, label='Min. items:',
                  callback=self.filter_change)
-        gui.spin(hbox, self, 'filterAntecedentMax', 2, 999, label='Max. items:',
+        gui.spin(hbox, self, 'filterAntecedentMax', 1, 999, label='Max. items:',
                  callback=self.filter_change)
         gui.rubber(hbox)
 
@@ -172,7 +172,7 @@ class OWAssociate(widget.OWWidget):
         hbox = gui.widgetBox(box, orientation='horizontal')
         gui.spin(hbox, self, 'filterConsequentMin', 1, 998, label='Min. items:',
                  callback=self.filter_change)
-        gui.spin(hbox, self, 'filterConsequentMax', 2, 999, label='Max. items:',
+        gui.spin(hbox, self, 'filterConsequentMax', 1, 999, label='Max. items:',
                  callback=self.filter_change)
         gui.checkBox(box, self, 'filterSearch',
                      label='Apply these filters in search',
