@@ -3,16 +3,16 @@ import re
 import numpy as np
 from scipy.sparse import issparse
 
-from Orange.data import Table
+from Orange.data import Table, ContinuousVariable, StringVariable, Domain
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.widget import Input, Output
 
 from AnyQt.QtCore import Qt, QSortFilterProxyModel
-from AnyQt.QtGui import (
-    QApplication, QStandardItem, QStandardItemModel)
-from AnyQt.QtWidgets import QTableView, qApp
+from AnyQt.QtGui import QStandardItem, QStandardItemModel
+from AnyQt.QtWidgets import QTableView, qApp, QApplication
 
-from orangecontrib.associate.fpgrowth import frequent_itemsets, OneHot, association_rules, rules_stats
+from orangecontrib.associate.fpgrowth import frequent_itemsets, OneHot, \
+    association_rules, rules_stats
 
 
 class OWAssociate(widget.OWWidget):
@@ -26,6 +26,7 @@ class OWAssociate(widget.OWWidget):
 
     class Outputs:
         matching_data = Output("Matching Data", Table)
+        rules = Output("Rules", Table)
 
     class Error(widget.OWWidget.Error):
         need_discrete_data = widget.Msg("Need some discrete data to work with.")
@@ -49,9 +50,23 @@ class OWAssociate(widget.OWWidget):
     filterConsequentMin = settings.Setting(1)
     filterConsequentMax = settings.Setting(1000)
 
+    header = [("Supp", "Support", "Support"),
+              ("Conf", "Confidence", "Confidence (support / antecedent "
+                                    "support)"),
+              ("Covr", "Coverage", "Coverage (antecedent support / number of examples)"),
+              ("Strg", "Strength", "Strength (consequent support / antecedent support)"),
+              ("Lift", "Lift",
+               "Lift (number of examples * confidence / consequent support)"),
+              ("Levr", "Leverage",
+               "Leverage ((support * number of examples - antecedent support * consequent support) / (number of examples)²)"),
+              ("Antecedent", "Antecedent", None),
+              ("", "", None),
+              ("Consequent", "Consequent", None)]
+
     def __init__(self):
         self.data = None
         self.output = None
+        self.table_rules = None
         self.onehot_mapping = {}
         self._is_running = False
         self._antecedentMatch = self._consequentMatch = lambda x: True
@@ -224,17 +239,39 @@ class OWAssociate(widget.OWWidget):
             self.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
     class ProxyModel(QSortFilterProxyModel):
+        ANTECEDENT_IND = 6
+        CONSEQUENT_IND = 8
+
         def __init__(self, *args, **kwargs):
             super().__init__(*args, sortRole=OWAssociate.ITEM_DATA_ROLE, **kwargs)
 
         def filterAcceptsRow(self, row, parent):
             widget = self.parent()
-            antecedent = self.sourceModel().index(row, 6, parent)
-            consequent = self.sourceModel().index(row, 8, parent)
+            antecedent = self.sourceModel().index(row, self.ANTECEDENT_IND, parent)
+            consequent = self.sourceModel().index(row, self.CONSEQUENT_IND, parent)
             return bool(widget.isSizeMatch(antecedent.data(OWAssociate.ITEM_DATA_ROLE),
                                            consequent.data(OWAssociate.ITEM_DATA_ROLE)) and
                         widget.isRegexMatch(antecedent.data(),
                                             consequent.data()))
+
+        def get_data(self):
+            col_names = [name for _, name, _ in self.parent().header]
+            numeric = [ContinuousVariable(name) for name in col_names[:self.ANTECEDENT_IND]]
+            string = [StringVariable(col_names[i]) for i in (self.ANTECEDENT_IND, self.CONSEQUENT_IND)]
+            domain = Domain(numeric, metas=string)
+            data = []
+            for row in range(self.rowCount()):
+                data_inst = []
+                for column in range(self.columnCount()):
+                    index = self.index(row, column)
+                    data_inst.append(self.data(index))
+                data.append(data_inst)
+            data = np.array(data)
+            table = Table.from_numpy(domain, X=data[:, :len(numeric)].astype(float),
+                                     metas=data[:, [self.ANTECEDENT_IND,
+                                                    self.CONSEQUENT_IND]])
+            table.name = "association rules"
+            return table
 
     def find_rules(self):
         if self.data is None or not len(self.data):
@@ -274,15 +311,7 @@ class OWAssociate(widget.OWWidget):
         assert bool(class_items) == bool(self.classify)
 
         model = QStandardItemModel(self.table)
-        for col, (label, tooltip) in enumerate([("Supp", "Support"),
-                                                ("Conf", "Confidence (support / antecedent support)"),
-                                                ("Covr", "Coverage (antecedent support / number of examples)"),
-                                                ("Strg", "Strength (consequent support / antecedent support)"),
-                                                ("Lift", "Lift (number of examples * confidence / consequent support)"),
-                                                ("Levr", "Leverage ((support * number of examples - antecedent support * consequent support) / (number of examples)²)"),
-                                                ("Antecedent", None),
-                                                ("", None),
-                                                ("Consequent", None)]):
+        for col, (label, _, tooltip) in enumerate(self.header):
             item = QStandardItem(label)
             item.setToolTip(tooltip)
             model.setHorizontalHeaderItem(col, item)
@@ -363,6 +392,9 @@ class OWAssociate(widget.OWWidget):
             table.resizeColumnToContents(i)
         table.setSortingEnabled(True)
         table.setHidden(False)
+        self.table_rules = proxy_model.get_data()
+        if self.table_rules is not None:
+            self.Outputs.rules.send(self.table_rules)
 
         self.button.button.setText('Find Rules')
 
@@ -395,6 +427,7 @@ class OWAssociate(widget.OWWidget):
                     self.Warning.cont_attrs()
         else:
             self.output = None
+            self.table_rules = None
             self.commit()
         if self.autoFind and not is_error:
             self.find_rules()
