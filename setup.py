@@ -58,6 +58,7 @@ def do_setup(ext_modules):
         install_requires=[
             'numpy',
             'scipy',
+            'Orange3>=3.25.0'
         ],
         namespace_packages=['orangecontrib'],
         ext_modules=ext_modules,
