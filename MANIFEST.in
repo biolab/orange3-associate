@@ -1,0 +1,6 @@
+recursive-include orangecontrib icons/* *.cpp *.pyx
+recursive-include orangecontrib/associate/widgets/tests data/*
+global-exclude __pycache__
+
+# Include README.pypi in the source package
+include README.pypi

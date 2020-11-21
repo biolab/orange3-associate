@@ -1,23 +1,18 @@
-
 import re
-from collections import defaultdict
 
 import numpy as np
 from scipy.sparse import issparse
 
-from Orange.data import Table
+from Orange.data import Table, ContinuousVariable, StringVariable, Domain
 from Orange.widgets import widget, gui, settings
-from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraph
 from Orange.widgets.widget import Input, Output
 
-from AnyQt.QtCore import Qt, QSize, pyqtSignal, QRectF, QSortFilterProxyModel
-from AnyQt.QtGui import (
-    QApplication, QStandardItem, QStandardItemModel, QMouseEvent, QPen, QBrush, QColor)
-from AnyQt.QtWidgets import QLabel, QTableView, QMainWindow, QGraphicsView, qApp
+from AnyQt.QtCore import Qt, QSortFilterProxyModel
+from AnyQt.QtGui import QStandardItem, QStandardItemModel
+from AnyQt.QtWidgets import QTableView, qApp, QApplication
 
-from orangecontrib.associate.fpgrowth import frequent_itemsets, OneHot, association_rules, rules_stats
-
-import pyqtgraph as pg
+from orangecontrib.associate.fpgrowth import frequent_itemsets, OneHot, \
+    association_rules, rules_stats
 
 
 class OWAssociate(widget.OWWidget):
@@ -31,6 +26,7 @@ class OWAssociate(widget.OWWidget):
 
     class Outputs:
         matching_data = Output("Matching Data", Table)
+        rules = Output("Rules", Table)
 
     class Error(widget.OWWidget.Error):
         need_discrete_data = widget.Msg("Need some discrete data to work with.")
@@ -54,9 +50,23 @@ class OWAssociate(widget.OWWidget):
     filterConsequentMin = settings.Setting(1)
     filterConsequentMax = settings.Setting(1000)
 
+    header = [("Supp", "Support", "Support"),
+              ("Conf", "Confidence", "Confidence (support / antecedent "
+                                    "support)"),
+              ("Covr", "Coverage", "Coverage (antecedent support / number of examples)"),
+              ("Strg", "Strength", "Strength (consequent support / antecedent support)"),
+              ("Lift", "Lift",
+               "Lift (number of examples * confidence / consequent support)"),
+              ("Levr", "Leverage",
+               "Leverage ((support * number of examples - antecedent support * consequent support) / (number of examples)²)"),
+              ("Antecedent", "Antecedent", None),
+              ("", "", None),
+              ("Consequent", "Consequent", None)]
+
     def __init__(self):
         self.data = None
         self.output = None
+        self.table_rules = None
         self.onehot_mapping = {}
         self._is_running = False
         self._antecedentMatch = self._consequentMatch = lambda x: True
@@ -135,23 +145,6 @@ class OWAssociate(widget.OWWidget):
 
         vbox = gui.widgetBox(self.controlArea, 'Filter rules')
 
-        ## This is disabled because it's hard to make a scatter plot with
-        ## selectable spots. Options:
-        ## * PyQtGraph, which doesn't support selection OOTB (+is poorly
-        ##   contrived and under-documented);
-        ## * Orange.widgets.visualize.ScatterPlotGraph, which comes without
-        ##   any documentation or comprehensible examples of use whatsoever;
-        ## * QGraphicsView, which would work, but lacks graphing features,
-        ##   namely labels, axes, ticks.
-        ##
-        ## I don't feel like pursuing any of those right now, so I am letting
-        ## it to be figured out at a later date.
-        #~ button = self.scatter_button = gui.button(vbox, self, 'Scatter plot',
-                                                  #~ callback=self.show_scatter,
-                                                  #~ autoDefault=False)
-        #~ button.setDisabled(True)
-        #~ self.scatter = self.ScatterPlotWindow(self)
-
         box = gui.widgetBox(vbox, 'Antecedent')
         gui.lineEdit(box, self, 'filterKeywordsAntecedent', 'Contains:',
                      callback=self.filter_change, orientation='horizontal',
@@ -160,7 +153,7 @@ class OWAssociate(widget.OWWidget):
         hbox = gui.widgetBox(box, orientation='horizontal')
         gui.spin(hbox, self, 'filterAntecedentMin', 1, 998, label='Min. items:',
                  callback=self.filter_change)
-        gui.spin(hbox, self, 'filterAntecedentMax', 2, 999, label='Max. items:',
+        gui.spin(hbox, self, 'filterAntecedentMax', 1, 999, label='Max. items:',
                  callback=self.filter_change)
         gui.rubber(hbox)
 
@@ -172,7 +165,7 @@ class OWAssociate(widget.OWWidget):
         hbox = gui.widgetBox(box, orientation='horizontal')
         gui.spin(hbox, self, 'filterConsequentMin', 1, 998, label='Min. items:',
                  callback=self.filter_change)
-        gui.spin(hbox, self, 'filterConsequentMax', 2, 999, label='Max. items:',
+        gui.spin(hbox, self, 'filterConsequentMax', 1, 999, label='Max. items:',
                  callback=self.filter_change)
         gui.checkBox(box, self, 'filterSearch',
                      label='Apply these filters in search',
@@ -246,17 +239,39 @@ class OWAssociate(widget.OWWidget):
             self.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
     class ProxyModel(QSortFilterProxyModel):
+        ANTECEDENT_IND = 6
+        CONSEQUENT_IND = 8
+
         def __init__(self, *args, **kwargs):
             super().__init__(*args, sortRole=OWAssociate.ITEM_DATA_ROLE, **kwargs)
 
         def filterAcceptsRow(self, row, parent):
             widget = self.parent()
-            antecedent = self.sourceModel().index(row, 6, parent)
-            consequent = self.sourceModel().index(row, 8, parent)
+            antecedent = self.sourceModel().index(row, self.ANTECEDENT_IND, parent)
+            consequent = self.sourceModel().index(row, self.CONSEQUENT_IND, parent)
             return bool(widget.isSizeMatch(antecedent.data(OWAssociate.ITEM_DATA_ROLE),
                                            consequent.data(OWAssociate.ITEM_DATA_ROLE)) and
                         widget.isRegexMatch(antecedent.data(),
                                             consequent.data()))
+
+        def get_data(self):
+            col_names = [name for _, name, _ in self.parent().header]
+            numeric = [ContinuousVariable(name) for name in col_names[:self.ANTECEDENT_IND]]
+            string = [StringVariable(col_names[i]) for i in (self.ANTECEDENT_IND, self.CONSEQUENT_IND)]
+            domain = Domain(numeric, metas=string)
+            data = []
+            for row in range(self.rowCount()):
+                data_inst = []
+                for column in range(self.columnCount()):
+                    index = self.index(row, column)
+                    data_inst.append(self.data(index))
+                data.append(data_inst)
+            data = np.array(data)
+            table = Table.from_numpy(domain, X=data[:, :len(numeric)].astype(float),
+                                     metas=data[:, [self.ANTECEDENT_IND,
+                                                    self.CONSEQUENT_IND]])
+            table.name = "association rules"
+            return table
 
     def find_rules(self):
         if self.data is None or not len(self.data):
@@ -296,21 +311,10 @@ class OWAssociate(widget.OWWidget):
         assert bool(class_items) == bool(self.classify)
 
         model = QStandardItemModel(self.table)
-        for col, (label, tooltip) in enumerate([("Supp", "Support"),
-                                                ("Conf", "Confidence (support / antecedent support)"),
-                                                ("Covr", "Coverage (antecedent support / number of examples)"),
-                                                ("Strg", "Strength (consequent support / antecedent support)"),
-                                                ("Lift", "Lift (number of examples * confidence / consequent support)"),
-                                                ("Levr", "Leverage ((support * number of examples - antecedent support * consequent support) / (number of examples)²)"),
-                                                ("Antecedent", None),
-                                                ("", None),
-                                                ("Consequent", None)]):
+        for col, (label, _, tooltip) in enumerate(self.header):
             item = QStandardItem(label)
             item.setToolTip(tooltip)
             model.setHorizontalHeaderItem(col, item)
-
-        #~ # Aggregate rules by common (support,confidence) for scatterplot
-        #~ scatter_agg = defaultdict(list)
 
         # Find itemsets
         nRules = 0
@@ -366,7 +370,6 @@ class OWAssociate(widget.OWWidget):
                                      left_item,
                                      ARROW_ITEM.clone(),
                                      StandardItem(right_str, len(right))])
-                    #~ scatter_agg[(round(support / n_examples, 2), round(confidence, 2))].append((left, right))
                     nRules += 1
                     progress.advance()
 
@@ -389,6 +392,9 @@ class OWAssociate(widget.OWWidget):
             table.resizeColumnToContents(i)
         table.setSortingEnabled(True)
         table.setHidden(False)
+        self.table_rules = proxy_model.get_data()
+        if self.table_rules is not None:
+            self.Outputs.rules.send(self.table_rules)
 
         self.button.button.setText('Find Rules')
 
@@ -397,95 +403,6 @@ class OWAssociate(widget.OWWidget):
         self.nSelectedRules = 0
         self.nSelectedExamples = 0
         self._is_running = False
-
-        #~ self.scatter_agg = scatter_agg
-        #~ self.scatter_button.setDisabled(not nRules)
-        #~ if self.scatter.isVisible():
-            #~ self.show_scatter()
-
-    class ScatterPlotWindow(QMainWindow):
-
-        class PlotWidget(pg.PlotWidget):
-            _selection = []
-            selectionChanged = pyqtSignal()
-
-            def setScatter(self, scatter):
-                self.scatter = scatter
-
-            def mousePressEvent(self, event):
-                self._start_pos = event.pos()
-                if event.button() == Qt.LeftButton:
-                    # Save the current selection and restore it on mouse{Move,Release}
-                    if not event.modifiers() & Qt.ShiftModifier:
-                        self._selection = []
-                QGraphicsView.mousePressEvent(self, event)
-            def mouseMoveEvent(self, event):
-                QGraphicsView.mouseMoveEvent(self, event)
-
-            SELECTED_PEN = QPen(QBrush(QColor('#ee3300')), .3)
-
-            def mouseReleaseEvent(self, event):
-                QGraphicsView.mouseReleaseEvent(self, event)
-                if event.button() != Qt.LeftButton:
-                    return
-                _start_pos = self.plotItem.items[0].mapFromScene(self._start_pos)
-                _end_pos = self.plotItem.items[0].mapFromScene(event.pos())
-                sx, sy = _start_pos.x(), _start_pos.y()
-                ex, ey = _end_pos.x(), _end_pos.y()
-                if sx > ex: sx, ex = ex, sx
-                if sy < ey: sy, ey = ey, sy
-                data = self.scatter.data
-                selected_indices = ((sx <= data['x']) &
-                                    (data['x'] <= ex) &
-                                    (ey <= data['y']) &
-                                    (data['y'] <= sy)).nonzero()[0]
-                self._selection.extend(selected_indices)
-
-                data['pen'][selected_indices] = self.SELECTED_PEN
-                self.scatter.points()
-                for item in data['item'][selected_indices]:
-                    item.updateItem()
-
-                print(data['data'][selected_indices])
-                # TODO: emit selectionChanged
-
-        def __init__(self, parent):
-            super().__init__(parent)
-
-            self.setWindowTitle('Association rules scatter plot')
-            scatter = self.scatter = pg.ScatterPlotItem(size=5, symbol='s', pen=pg.mkPen(None))
-            plot = self.plot = self.PlotWidget(background='w',
-                                               labels=dict(left='Confidence',
-                                                           bottom='Support'))
-            plot.setScatter(scatter)
-            plot.setLimits(xMin=0, xMax=1.02, yMin=0, yMax=1.02,
-                           minXRange=0.5, minYRange=0.5)
-            self.setCentralWidget(plot)
-            plot.addItem(scatter)
-            plot.hideButtons()
-            self.lastClicked = []
-            scatter.sigClicked.connect(self.clicked)
-
-        def clicked(self, plot, points):
-            for p in self.lastClicked:
-                p.resetPen()
-            for p in points:
-                p.setPen(self.plot.SELECTED_PEN)
-            lastClicked = points
-
-        def sizeHint(self, hint=QSize(400, 400)):
-            return hint
-
-
-    def show_scatter(self):
-        spots = [dict(pos=pos,
-                      data=rules,
-                      brush=pg.mkColor(np.clip(1/len(rules), 0, .8)),
-                      pen=pg.mkColor(np.clip(1/len(rules), .1, .8) - .1))
-                 for pos, rules in self.scatter_agg.items()]
-        self.scatter.scatter.setData(spots=spots)
-        self.scatter.plot.setRange(xRange=(0, 1), yRange=(0, 1))
-        self.scatter.show()
 
     @Inputs.data
     def set_data(self, data):
@@ -510,6 +427,7 @@ class OWAssociate(widget.OWWidget):
                     self.Warning.cont_attrs()
         else:
             self.output = None
+            self.table_rules = None
             self.commit()
         if self.autoFind and not is_error:
             self.find_rules()
