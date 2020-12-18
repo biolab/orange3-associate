@@ -15,3 +15,6 @@ class TestOWAssociate(WidgetTest):
         self.widget.controls.autoFind.click()
         output = self.get_output(self.widget.Outputs.rules)
         self.assertTrue(output)
+
+    def test_minimum_size(self):
+        pass

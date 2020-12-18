@@ -60,6 +60,9 @@ def do_setup(ext_modules):
             'scipy',
             'Orange3>=3.25.0'
         ],
+        extras_require={
+            'test': ['pytest', 'coverage']
+        },
         namespace_packages=['orangecontrib'],
         ext_modules=ext_modules,
         classifiers=[
@@ -73,6 +76,7 @@ def do_setup(ext_modules):
             'Intended Audience :: Developers',
         ],
         zip_safe=False,
+        include_package_data=True
     )
 
 
