@@ -1,6 +1,6 @@
-recursive-include orangecontrib icons/* *.cpp *.pyx
-recursive-include orangecontrib/associate/widgets/tests data/*
-global-exclude __pycache__
+recursive-include orangecontrib icons/* *.cpp *.pyx *.pyd *.tab
+recursive-include . *.sh *.toml *.ini
+recursive-include doc *.bat *.json *.md *.png *.py *.rst *.txt Makefile
 
 # Include README.pypi in the source package
 include README.pypi
