@@ -35,6 +35,7 @@ class OWAssociate(widget.OWWidget):
     class Warning(widget.OWWidget.Warning):
         cont_attrs = widget.Msg("Data has continuous attributes which will be skipped.")
         err_reg_expression = widget.Msg("Error in {} regular expression: {}")
+        filter_no_match = widget.Msg("No rules match the filter.")
 
     minSupport = settings.Setting(1)
     minConfidence = settings.Setting(90)
@@ -202,6 +203,7 @@ class OWAssociate(widget.OWWidget):
 
     def filter_change(self):
         self.Warning.err_reg_expression.clear()
+        self.Warning.filter_no_match.clear()
         try:
             self._antecedentMatch = re.compile(
                 '|'.join(i.strip()
@@ -266,6 +268,8 @@ class OWAssociate(widget.OWWidget):
                     index = self.index(row, column)
                     data_inst.append(self.data(index))
                 data.append(data_inst)
+            if not data:
+                return None
             data = np.array(data)
             table = Table.from_numpy(domain, X=data[:, :len(numeric)].astype(float),
                                      metas=data[:, [self.ANTECEDENT_IND,
@@ -393,13 +397,14 @@ class OWAssociate(widget.OWWidget):
         table.setSortingEnabled(True)
         table.setHidden(False)
         self.table_rules = proxy_model.get_data()
-        if self.table_rules is not None:
-            self.Outputs.rules.send(self.table_rules)
+        self.Outputs.rules.send(self.table_rules)
 
         self.button.button.setText('Find Rules')
 
         self.nRules = nRules
         self.nFilteredRules = proxy_model.rowCount()  # TODO: continue; also add in owitemsets
+        if not self.nFilteredRules:
+            self.Warning.filter_no_match()
         self.nSelectedRules = 0
         self.nSelectedExamples = 0
         self._is_running = False
