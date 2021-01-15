@@ -9,7 +9,7 @@ from Orange.widgets.widget import Input, Output
 
 from AnyQt.QtCore import Qt, QSortFilterProxyModel
 from AnyQt.QtGui import QStandardItem, QStandardItemModel
-from AnyQt.QtWidgets import QTableView, qApp, QApplication
+from AnyQt.QtWidgets import QTableView, qApp, QApplication, QGridLayout, QLabel
 
 from orangecontrib.associate.fpgrowth import frequent_itemsets, OneHot, \
     association_rules, rules_stats
@@ -122,65 +122,95 @@ class OWAssociate(widget.OWWidget):
         self.mainArea.layout().addWidget(table)
 
         box = gui.widgetBox(self.controlArea, "Info")
-        self.nRules = self.nFilteredRules = self.nSelectedExamples = self.nSelectedRules = ''
-        gui.label(box, self, "Number of rules: %(nRules)s")
-        gui.label(box, self, "Filtered rules: %(nFilteredRules)s")
-        gui.label(box, self, "Selected rules: %(nSelectedRules)s")
-        gui.label(box, self, "Selected examples: %(nSelectedExamples)s")
+        self.nRules = self.nFilteredRules = self.nSelectedExamples = self.nSelectedRules = 0
+        gui.label(box, self, "Rules: %(nRules)s (shown %(nFilteredRules)s)")
 
-        box = gui.widgetBox(self.controlArea, 'Find association rules')
-        gui.valueSlider(box, self, 'minSupport',
-                        values=[.0001, .0005, .001, .005, .01, .05, .1, .5] + list(range(1, 101)),
-                        label='Minimal support:', labelFormat="%g%%",
-                        callback=lambda: self.find_rules())
-        gui.hSlider(box, self, 'minConfidence', minValue=1, maxValue=100,
-                    label='Minimal confidence:', labelFormat="%g%%",
-                    callback=lambda: self.find_rules())
-        gui.hSlider(box, self, 'maxRules', minValue=10000, maxValue=100000, step=10000,
-                    label='Max. number of rules:', callback=lambda: self.find_rules())
+        grid = QGridLayout()
+        gui.widgetBox(self.controlArea, 'Find association rules',
+                      orientation=grid)
+        grid.addWidget(QLabel("Min. supp.:"), 0, 0)
+        grid.addWidget(
+            gui.valueSlider(None, self, 'minSupport',
+                            width=100,
+                            values=[.0001, .0005, .001, .005, .01, .05, .1, .5]
+                                   + list(range(1, 10)) + list(
+                                range(10, 101, 5))),
+            0, 1
+        )
+        grid.addWidget(gui.label(None, self, "%(minSupport)g %%"), 0, 2)
+
+        grid.addWidget(QLabel("Min. conf.:"), 1, 0)
+        grid.addWidget(
+            gui.hSlider(None, self, 'minConfidence', width=100,
+                        minValue=1, maxValue=100),
+            1, 1
+        )
+        grid.addWidget(gui.label(None, self, "%(minConfidence)g %%"), 1, 2)
+
+        def set_mr_label():
+            lab_maxrules.setText(f"{self.maxRules // 1000}k")
+
+        grid.addWidget(QLabel("Max. rules:"), 2, 0)
+        grid.addWidget(
+            gui.valueSlider(None, self, 'maxRules', width=100,
+                            values=list(range(10000, 100001, 10000)),
+                            callback=set_mr_label),
+            2, 1
+        )
+        lab_maxrules = QLabel()
+        grid.addWidget(lab_maxrules, 2, 2)
+        set_mr_label()
+
+
         self.cb_classify = gui.checkBox(
-            box, self, 'classify', label='Induce classification (itemset → class) rules')
-        self.button = gui.auto_commit(
-                box, self, 'autoFind', 'Find Rules', commit=self.find_rules,
-                callback=lambda: self.autoFind and self.find_rules())
+            None, self, 'classify', label='Induce only classification rules')
+        grid.addWidget(self.cb_classify, 3, 0, 1, 3)
 
-        vbox = gui.widgetBox(self.controlArea, 'Filter rules')
+        grid.addWidget(
+            gui.checkBox(
+                box, self, 'filterSearch',
+                label='Restrict search by below filters',
+                tooltip='If checked, the rules are filtered according '
+                        'to these filter conditions already in the search '
+                        'phase. \nIf unchecked, the only filters applied '
+                        'during search are the ones above, '
+                        'and the generated rules \nare filtered afterwards '
+                        'only for display, i.e. only the matching association '
+                        'rules are shown.'),
+            4, 0, 1, 3)
 
-        box = gui.widgetBox(vbox, 'Antecedent')
+        self.button = gui.button(
+            None, self, 'Find Rules', callback=self.find_rules,
+            default=False, autoDefault=False)
+        grid.addWidget(self.button, 5, 0, 1, 3)
+
+        box = gui.widgetBox(self.controlArea, 'Filter by Antecedent')
         gui.lineEdit(box, self, 'filterKeywordsAntecedent', 'Contains:',
                      callback=self.filter_change, orientation='horizontal',
                      tooltip='A comma or space-separated list of regular '
                              'expressions.')
         hbox = gui.widgetBox(box, orientation='horizontal')
-        gui.spin(hbox, self, 'filterAntecedentMin', 1, 998, label='Min. items:',
+        gui.spin(hbox, self, 'filterAntecedentMin', 1, 998, label='Items, min:',
                  callback=self.filter_change)
-        gui.spin(hbox, self, 'filterAntecedentMax', 1, 999, label='Max. items:',
+        gui.spin(hbox, self, 'filterAntecedentMax', 1, 999, label='max:',
                  callback=self.filter_change)
         gui.rubber(hbox)
 
-        box = gui.widgetBox(vbox, 'Consequent')
+        box = gui.widgetBox(self.controlArea, 'Filter by Consequent')
         gui.lineEdit(box, self, 'filterKeywordsConsequent', 'Contains:',
                      callback=self.filter_change, orientation='horizontal',
                      tooltip='A comma or space-separated list of regular '
                              'expressions.')
         hbox = gui.widgetBox(box, orientation='horizontal')
-        gui.spin(hbox, self, 'filterConsequentMin', 1, 998, label='Min. items:',
+        gui.spin(hbox, self, 'filterConsequentMin', 1, 998, label='Items, min:',
                  callback=self.filter_change)
-        gui.spin(hbox, self, 'filterConsequentMax', 1, 999, label='Max. items:',
+        gui.spin(hbox, self, 'filterConsequentMax', 1, 999, label='max:',
                  callback=self.filter_change)
-        gui.checkBox(box, self, 'filterSearch',
-                     label='Apply these filters in search',
-                     tooltip='If checked, the rules are filtered according '
-                             'to these filter conditions already in the search '
-                             'phase. \nIf unchecked, the only filters applied '
-                             'during search are the ones above, '
-                             'and the generated rules \nare filtered afterwards '
-                             'only for display, i.e. only the matching association '
-                             'rules are shown.')
         gui.rubber(hbox)
 
         gui.rubber(self.controlArea)
-        gui.auto_commit(self.controlArea, self, 'autoSend', 'Send selection')
+        gui.auto_commit(self.controlArea, self, 'autoSend', 'Send selection',
+                        auto_label="Send selection")
 
         self.filter_change()
 
@@ -193,6 +223,7 @@ class OWAssociate(widget.OWWidget):
 
     def commit(self):
         self.Outputs.matching_data.send(self.output)
+        self._set_output_summary()
 
     def isSizeMatch(self, antecedentSize, consequentSize):
         return (self.filterAntecedentMin <= antecedentSize <= self.filterAntecedentMax and
@@ -284,7 +315,7 @@ class OWAssociate(widget.OWWidget):
             self._is_running = False
             return
 
-        self.button.button.setText('Cancel')
+        self.button.setText('Cancel')
 
         self._is_running = True
         data = self.data
@@ -398,8 +429,9 @@ class OWAssociate(widget.OWWidget):
         table.setHidden(False)
         self.table_rules = proxy_model.get_data()
         self.Outputs.rules.send(self.table_rules)
+        self._set_output_summary()
 
-        self.button.button.setText('Find Rules')
+        self.button.setText('Find Rules')
 
         self.nRules = nRules
         self.nFilteredRules = proxy_model.rowCount()  # TODO: continue; also add in owitemsets
@@ -409,11 +441,23 @@ class OWAssociate(widget.OWWidget):
         self.nSelectedExamples = 0
         self._is_running = False
 
+    def _set_output_summary(self):
+        if self.table_rules is None:
+            self.info.set_output_summary(self.info.NoOutput)
+        else:
+            n_rules = len(self.table_rules)
+            len_data = 0 if self.output is None else len(self.output)
+            self.info.set_output_summary(
+                len_data,
+                f"{n_rules} rule{'s' * (n_rules % 100 != 1)}, "
+                f"{len_data} data instance{'s' * (len_data % 100 != 1)}")
+
     @Inputs.data
     def set_data(self, data):
         self.data = data
         is_error = False
         if data is not None:
+            self.info.set_input_summary(len(data))
             if not data.domain.has_discrete_class:
                 self.cb_classify.setDisabled(True)
                 self.classify = False
@@ -433,6 +477,7 @@ class OWAssociate(widget.OWWidget):
         else:
             self.output = None
             self.table_rules = None
+            self.info.set_input_summary(self.info.NoInput)
             self.commit()
         if self.autoFind and not is_error:
             self.find_rules()

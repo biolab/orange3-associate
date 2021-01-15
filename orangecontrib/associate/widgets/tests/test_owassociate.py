@@ -1,4 +1,5 @@
 import os
+import unittest
 
 from Orange.data import Table
 from Orange.widgets.tests.base import WidgetTest
@@ -13,7 +14,7 @@ class TestOWAssociate(WidgetTest):
 
     def test_rules_output(self):
         self.send_signal(self.widget.Inputs.data, self.market)
-        self.widget.controls.autoFind.click()
+        self.widget.button.click()
         output = self.get_output(self.widget.Outputs.rules)
         self.assertTrue(output)
 
@@ -24,21 +25,21 @@ class TestOWAssociate(WidgetTest):
         self.send_signal(self.widget.Inputs.data, self.market)
 
         # no filtering
-        self.widget.unconditional_find_rules()
+        self.widget.find_rules()
         output = self.get_output(self.widget.Outputs.rules)
         self.assertEqual(38, len(output))
 
         # filter by existing column
         self.widget.filterKeywordsAntecedent = match_filter
         self.widget.filter_change()
-        self.widget.unconditional_find_rules()
+        self.widget.find_rules()
         output = self.get_output(self.widget.Outputs.rules)
         self.assertEqual(5, len(output))
 
         # filter by non-existing word
         self.widget.filterKeywordsAntecedent = no_match_filter
         self.widget.filter_change()
-        self.widget.unconditional_find_rules()
+        self.widget.find_rules()
         self.assertTrue(self.widget.Warning.filter_no_match.is_shown())
         output = self.get_output(self.widget.Outputs.rules)
         self.assertIsNone(output)
@@ -46,5 +47,9 @@ class TestOWAssociate(WidgetTest):
         # run again with defaults
         self.widget.filterKeywordsAntecedent = ""
         self.widget.filter_change()
-        self.widget.unconditional_find_rules()
+        self.widget.find_rules()
         self.assertFalse(self.widget.Warning.filter_no_match.is_shown())
+
+
+if __name__ == "__main__":
+    unittest.main()
