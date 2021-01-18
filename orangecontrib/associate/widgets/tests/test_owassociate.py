@@ -1,5 +1,6 @@
 import os
 import unittest
+from unittest.mock import patch
 
 from Orange.data import Table
 from Orange.widgets.tests.base import WidgetTest
@@ -49,6 +50,16 @@ class TestOWAssociate(WidgetTest):
         self.widget.filter_change()
         self.widget.find_rules()
         self.assertFalse(self.widget.Warning.filter_no_match.is_shown())
+
+    @patch("orangecontrib.associate.widgets.owassociate.OWAssociate.support_options",
+           [0.1, 0.2, 0.5, 1, 5, 20, 30, 50])
+    @patch("orangecontrib.associate.widgets.owassociate.OWAssociate.confidence_options",
+           [5, 20, 30, 50])
+    def test_migrate_supp_conf(self):
+        settings = {'minSupport': 0.3, 'minConfidence': 28}
+        OWAssociate.migrate_settings(settings, 1)
+        self.assertEqual(settings["minSupport"], 0.2)
+        self.assertEqual(settings["minConfidence"], 30)
 
 
 if __name__ == "__main__":
