@@ -4,13 +4,14 @@ from itertools import chain
 import numpy as np
 from scipy.sparse import issparse
 
+from AnyQt.QtCore import Qt, QSortFilterProxyModel
+from AnyQt.QtGui import QStandardItem, QStandardItemModel
+from AnyQt.QtWidgets import QTableView, qApp, QGridLayout, QLabel
+
 from Orange.data import Table, ContinuousVariable, StringVariable, Domain
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.widget import Input, Output
-
-from AnyQt.QtCore import Qt, QSortFilterProxyModel
-from AnyQt.QtGui import QStandardItem, QStandardItemModel
-from AnyQt.QtWidgets import QTableView, qApp, QApplication, QGridLayout, QLabel
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 
 from orangecontrib.associate.fpgrowth import frequent_itemsets, OneHot, \
     association_rules, rules_stats
@@ -497,12 +498,5 @@ class OWAssociate(widget.OWWidget):
                                             settings.get("minConfidence", 10))
 
 
-if __name__ == "__main__":
-    a = QApplication([])
-    ow = OWAssociate()
-
-    data = Table("zoo")
-    ow.set_data(data)
-
-    ow.show()
-    a.exec()
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWAssociate).run(Table("zoo"))
