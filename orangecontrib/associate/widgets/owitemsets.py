@@ -1,15 +1,17 @@
 
 import re
+from itertools import chain
 
 import numpy as np
 from scipy.sparse import issparse
 
+from AnyQt.QtCore import Qt, QItemSelection, QItemSelectionModel
+from AnyQt.QtWidgets import QTreeWidget, QTreeWidgetItem, qApp
+
 from Orange.data import Table
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.widget import Input, Output
-
-from AnyQt.QtCore import Qt, QItemSelection, QItemSelectionModel
-from AnyQt.QtWidgets import QApplication, QTreeWidget, QTreeWidgetItem, qApp
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 
 from orangecontrib.associate.fpgrowth import frequent_itemsets, OneHot
 
@@ -54,6 +56,10 @@ class OWItemsets(widget.OWWidget):
                        'itemsets-order', widget.Message.Information)
     ]
 
+    support_options = \
+        [.0001, .0005, .001, .005, .01, .05, .1, .5] \
+        + list(chain(range(1, 10), range(10, 101, 5)))
+
     def __init__(self):
         self.data = None
         self.output = None
@@ -82,7 +88,7 @@ class OWItemsets(widget.OWWidget):
         box = gui.widgetBox(self.controlArea, 'Find itemsets')
         gui.valueSlider(
             box, self, 'minSupport',
-            values=[.0001, .0005, .001, .005, .01, .05, .1, .5] + list(range(1, 101)),
+            values=self.support_options,
             label='Minimal support:', labelFormat="%g%%",
             callback=lambda: self.find_itemsets())
         gui.hSlider(box, self, 'maxItemsets', minValue=10000, maxValue=100000, step=10000,
@@ -330,13 +336,11 @@ class OWItemsets(widget.OWWidget):
         if self.autoFind and not is_error:
             self.find_itemsets()
 
+    @classmethod
+    def migrate_settings(cls, settings, _):
+        x = settings.get("minSupport", 1)
+        settings["minSupport"] = min(cls.support_options, key=lambda t: abs(t - x))
 
-if __name__ == "__main__":
-    a = QApplication([])
-    ow = OWItemsets()
 
-    data = Table("zoo")
-    ow.set_data(data)
-
-    ow.show()
-    a.exec()
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWItemsets).run(Table("zoo"))
