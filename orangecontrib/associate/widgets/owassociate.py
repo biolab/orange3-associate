@@ -1,15 +1,17 @@
 import re
+from itertools import chain
 
 import numpy as np
 from scipy.sparse import issparse
 
+from AnyQt.QtCore import Qt, QSortFilterProxyModel
+from AnyQt.QtGui import QStandardItem, QStandardItemModel
+from AnyQt.QtWidgets import QTableView, qApp, QGridLayout, QLabel
+
 from Orange.data import Table, ContinuousVariable, StringVariable, Domain
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.widget import Input, Output
-
-from AnyQt.QtCore import Qt, QSortFilterProxyModel
-from AnyQt.QtGui import QStandardItem, QStandardItemModel
-from AnyQt.QtWidgets import QTableView, qApp, QApplication, QGridLayout, QLabel
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 
 from orangecontrib.associate.fpgrowth import frequent_itemsets, OneHot, \
     association_rules, rules_stats
@@ -63,6 +65,12 @@ class OWAssociate(widget.OWWidget):
               ("Antecedent", "Antecedent", None),
               ("", "", None),
               ("Consequent", "Consequent", None)]
+
+    support_options = \
+        [.0001, .0005, .001, .005, .01, .05, .1, .5] \
+        + list(chain(range(1, 10), range(10, 101, 5)))
+    confidence_options = \
+        list(chain(range(1, 10), range(10, 20, 2), range(20, 101, 5)))
 
     def __init__(self):
         self.data = None
@@ -130,19 +138,16 @@ class OWAssociate(widget.OWWidget):
                       orientation=grid)
         grid.addWidget(QLabel("Min. supp.:"), 0, 0)
         grid.addWidget(
-            gui.valueSlider(None, self, 'minSupport',
-                            width=100,
-                            values=[.0001, .0005, .001, .005, .01, .05, .1, .5]
-                                   + list(range(1, 10)) + list(
-                                range(10, 101, 5))),
+            gui.valueSlider(None, self, 'minSupport', width=100,
+                            values=self.support_options),
             0, 1
         )
         grid.addWidget(gui.label(None, self, "%(minSupport)g %%"), 0, 2)
 
         grid.addWidget(QLabel("Min. conf.:"), 1, 0)
         grid.addWidget(
-            gui.hSlider(None, self, 'minConfidence', width=100,
-                        minValue=1, maxValue=100),
+            gui.valueSlider(None, self, 'minConfidence', width=100,
+                            values=self.confidence_options),
             1, 1
         )
         grid.addWidget(gui.label(None, self, "%(minConfidence)g %%"), 1, 2)
@@ -482,13 +487,16 @@ class OWAssociate(widget.OWWidget):
         if self.autoFind and not is_error:
             self.find_rules()
 
+    @classmethod
+    def migrate_settings(cls, settings, _):
+        def closest(s, x):
+            return min(s, key=lambda t: abs(t - x))
 
-if __name__ == "__main__":
-    a = QApplication([])
-    ow = OWAssociate()
+        settings["minSupport"] = closest(cls.support_options,
+                                         settings.get("minSupport", 1))
+        settings["minConfidence"] = closest(cls.confidence_options,
+                                            settings.get("minConfidence", 10))
 
-    data = Table("zoo")
-    ow.set_data(data)
 
-    ow.show()
-    a.exec()
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWAssociate).run(Table("zoo"))
