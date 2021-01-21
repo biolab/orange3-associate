@@ -13,39 +13,58 @@ jobs:
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.experimental }}
     timeout-minutes: 15
+    name: ${{ matrix.name }} (${{ matrix.os }}, ${{ matrix.python-version }})
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macOS-latest, windows-latest]
+        os: [ubuntu-18.04, macos-10.15, windows-2016]
         python-version: [3.7, 3.8]
         tox_env: [py-orange-released]
         experimental: [false]
+        name: [Released]
         include:
-          - os: windows-latest
+          - os: windows-2019
+            python-version: 3.8
+            tox_env: py-orange-released
+            experimental: true
+            name: Windows10
+          - os: macos-11.0
+            python-version: 3.8
+            tox_env: py-orange-released
+            experimental: true
+            name: Big Sur
+
+          - os: windows-2016
             python-version: 3.7
             tox_env: py-orange-oldest
             experimental: false
-          - os: macOS-latest
+            name: Oldest
+          - os: macos-10.15
             python-version: 3.7
             tox_env: py-orange-oldest
+            name: Oldest
             experimental: false
-          - os: ubuntu-latest
+          - os: ubuntu-18.04
             python-version: 3.7
             tox_env: py-orange-oldest
+            name: Oldest
             experimental: false
 
-          - os: windows-latest
+          - os: windows-2016
             python-version: 3.8
             tox_env: py-orange-latest
             experimental: false
-          - os: macOS-latest
+            name: Latest
+          - os: macos-10.15
             python-version: 3.8
             tox_env: py-orange-latest
             experimental: false
-          - os: ubuntu-latest
+            name: Latest
+          - os: ubuntu-18.04
             python-version: 3.8
             tox_env: py-orange-latest
             experimental: false
+            name: Latest
 
     steps:
       - uses: actions/checkout@v2
@@ -68,7 +87,7 @@ jobs:
       - name: Upload code coverage
         if: |
           matrix.python-version == '3.8' &&  
-          matrix.os == 'ubuntu-latest' && 
+          matrix.os == 'ubuntu-18.04' && 
           matrix.tox_env == 'py-orange-released'
         run: |
           pip install codecov
