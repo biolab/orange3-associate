@@ -61,7 +61,8 @@ def do_setup(ext_modules):
             'Orange3>=3.25.0'
         ],
         extras_require={
-            'test': ['pytest', 'coverage']
+            'test': ['pytest', 'coverage'],
+            'doc': ['sphinx', 'recommonmark', 'sphinx_rtd_theme'],
         },
         namespace_packages=['orangecontrib'],
         ext_modules=ext_modules,
