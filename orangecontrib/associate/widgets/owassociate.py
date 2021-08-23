@@ -228,7 +228,6 @@ class OWAssociate(widget.OWWidget):
 
     def commit(self):
         self.Outputs.matching_data.send(self.output)
-        self._set_output_summary()
 
     def isSizeMatch(self, antecedentSize, consequentSize):
         return (self.filterAntecedentMin <= antecedentSize <= self.filterAntecedentMax and
@@ -434,7 +433,6 @@ class OWAssociate(widget.OWWidget):
         table.setHidden(False)
         self.table_rules = proxy_model.get_data()
         self.Outputs.rules.send(self.table_rules)
-        self._set_output_summary()
 
         self.button.setText('Find Rules')
 
@@ -446,23 +444,11 @@ class OWAssociate(widget.OWWidget):
         self.nSelectedExamples = 0
         self._is_running = False
 
-    def _set_output_summary(self):
-        if self.table_rules is None:
-            self.info.set_output_summary(self.info.NoOutput)
-        else:
-            n_rules = len(self.table_rules)
-            len_data = 0 if self.output is None else len(self.output)
-            self.info.set_output_summary(
-                len_data,
-                f"{n_rules} rule{'s' * (n_rules % 100 != 1)}, "
-                f"{len_data} data instance{'s' * (len_data % 100 != 1)}")
-
     @Inputs.data
     def set_data(self, data):
         self.data = data
         is_error = False
         if data is not None:
-            self.info.set_input_summary(len(data))
             if not data.domain.has_discrete_class:
                 self.cb_classify.setDisabled(True)
                 self.classify = False
@@ -482,7 +468,6 @@ class OWAssociate(widget.OWWidget):
         else:
             self.output = None
             self.table_rules = None
-            self.info.set_input_summary(self.info.NoInput)
             self.commit()
         if self.autoFind and not is_error:
             self.find_rules()
