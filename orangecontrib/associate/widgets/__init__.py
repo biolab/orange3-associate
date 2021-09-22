@@ -11,9 +11,9 @@ BACKGROUND = "#cccc66"
 WIDGET_HELP_PATH = (
     # Used for development.
     # You still need to build help pages using
-    # make htmlhelp
+    # make html
     # inside doc folder
-    ("{DEVELOP_ROOT}/doc/_build/htmlhelp/index.html", None),
+    ("{DEVELOP_ROOT}/doc/_build/html/index.html", None),
 
     # Online documentation url, used when the local documentation is available.
     # Url should point to a page with a section Widgets. This section should

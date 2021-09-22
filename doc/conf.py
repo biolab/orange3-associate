@@ -35,6 +35,7 @@ sys.path.insert(0, join(dirname(dirname(__file__)), 'orangecontrib', 'associate'
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
+    'recommonmark'
 ]
 
 autodoc_member_order = 'bysource'
