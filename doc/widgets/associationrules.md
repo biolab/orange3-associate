@@ -41,7 +41,7 @@ This widget implements FP-growth [frequent pattern mining](https://en.wikipedia.
 Example
 -------
 
-Association Rules can be used directly with the [File](../data/file.md) widget.
+Association Rules can be used directly with the [File](https://orange3.readthedocs.io/projects/orange-visual-programming/en/latest/widgets/data/file.html) widget.
 
 ![](images/association-rules-example1.png)
 
