@@ -149,7 +149,8 @@ Reference with further examples below.
 # TODO: Consider FPClose from "Efficiently using prefix-trees in mining frequent itemsets"
 # TODO: Consider ExAnte: Anticipated data reduction in constrained pattern mining
 
-from collections import defaultdict, Iterator
+from collections import defaultdict
+from collections.abc import Iterator
 from itertools import combinations, chain
 from functools import reduce
 
