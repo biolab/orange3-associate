@@ -58,7 +58,7 @@ def do_setup(ext_modules):
         install_requires=[
             'numpy',
             'scipy',
-            'Orange3>=3.25.0'
+            'Orange3>=3.33.0'
         ],
         extras_require={
             'test': ['pytest', 'coverage'],
