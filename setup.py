@@ -77,7 +77,8 @@ def do_setup(ext_modules):
             'Intended Audience :: Developers',
         ],
         zip_safe=False,
-        include_package_data=True
+        include_package_data=True,
+        python_requires='>=3.9'
     )
 
 

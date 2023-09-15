@@ -8,28 +8,56 @@ on:
   workflow_dispatch:
 
 jobs:
+  generate-wheels-matrix:
+    # Create a matrix of all architectures & versions to build.
+    # This enables the next step to run cibuildwheel in parallel.
+    # From https://iscinumpy.dev/post/cibuildwheel-2-10-0/#only-210
+    name: Generate wheels matrix
+    runs-on: ubuntu-latest
+    outputs:
+      include: ${{ steps.set-matrix.outputs.include }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install cibuildwheel
+        # Nb. keep cibuildwheel version pin consistent with job below
+        run: pipx install cibuildwheel==2.14.1
+      - id: set-matrix
+        run: |
+          MATRIX=$(
+            {
+              cibuildwheel --print-build-identifiers --platform linux \
+              | jq -nRc '{"only": inputs, "os": "ubuntu-latest"}' \
+              && cibuildwheel --print-build-identifiers --platform macos \
+              | jq -nRc '{"only": inputs, "os": "macos-latest"}' \
+              && cibuildwheel --print-build-identifiers --platform windows \
+              | jq -nRc '{"only": inputs, "os": "windows-latest"}'
+            } | jq -sc
+          )
+          echo "include=$MATRIX" >> $GITHUB_OUTPUT
+
   build_wheels:
-    name: Build wheels on ${{ matrix.os }}
+    name: Build ${{ matrix.only }}
+    needs: generate-wheels-matrix
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-20.04, windows-2019, macOS-10.15]
+        include: ${{ fromJson(needs.generate-wheels-matrix.outputs.include) }}
 
     steps:
       - name: Check out the repo
         uses: actions/checkout@v2
 
-      # Used to host cibuildwheel
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
-
-      - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel==1.9.0
+      - name: Set up QEMU
+        if: runner.os == 'Linux'
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: all
 
       - name: Build wheels
-        run: python -m cibuildwheel --output-dir wheelhouse
-        env:
-          CIBW_SKIP: "cp27-* cp35-* pp*"
+        uses: pypa/cibuildwheel@v2.14.1
+        with:
+          only: ${{ matrix.only }}
 
       - uses: actions/upload-artifact@v2
         with:
@@ -61,6 +89,7 @@ jobs:
     name:  Upload Release Assets
     needs: [build_wheels]
     runs-on: ubuntu-20.04
+    if: startsWith(github.ref, 'refs/tags')
 
     steps:
       - name: Download bdist files
@@ -83,6 +112,7 @@ jobs:
     name:  PyPI Publish
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-20.04
+    if: startsWith(github.ref, 'refs/tags')
 
     steps:
       - name: Download bdist files
@@ -106,5 +136,3 @@ jobs:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
           packages_dir: downloads/
-          # repository_url: https://test.pypi.org/legacy/
-          # verbose: true

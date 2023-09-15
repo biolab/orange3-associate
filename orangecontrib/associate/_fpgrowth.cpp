@@ -2643,7 +2643,7 @@ static CYTHON_INLINE PyObject* __Pyx_PyInt_From_int(int value) {
     }
 
 #if CYTHON_USE_PYLONG_INTERNALS
-  #include "longintrepr.h"
+  #include "Python.h"
 #endif
 
 static CYTHON_INLINE int __Pyx_PyInt_As_int(PyObject *x) {
