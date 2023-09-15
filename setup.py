@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 from distutils.extension import Extension
 from os import path
 
-VERSION = '1.2.0'
+VERSION = '1.2.1'
 
 ENTRY_POINTS = {
     'orange3.addon': (
