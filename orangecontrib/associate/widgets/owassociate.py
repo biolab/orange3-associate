@@ -126,7 +126,10 @@ class OWAssociate(widget.OWWidget):
         table.verticalHeader().setVisible(False)
         table.verticalHeader().setDefaultSectionSize(table.verticalHeader().minimumSectionSize())
         table.horizontalHeader().setStretchLastSection(True)
-        table.setModel(QStandardItemModel(table))
+        proxy_model = self.proxy_model
+        proxy_model.setSourceModel(QStandardItemModel(table))
+        table.setModel(proxy_model)
+
         self.mainArea.layout().addWidget(table)
 
         box = gui.widgetBox(self.controlArea, "Info")
@@ -323,7 +326,8 @@ class OWAssociate(widget.OWWidget):
 
         self._is_running = True
         data = self.data
-        self.table.model().clear()
+        model = self.table.model().sourceModel()
+        model.clear()
 
         n_examples = len(data)
         NumericItem = self.NumericItem
@@ -349,7 +353,6 @@ class OWAssociate(widget.OWWidget):
                        if var is data.domain.class_var} if self.classify else set()
         assert bool(class_items) == bool(self.classify)
 
-        model = QStandardItemModel(self.table)
         for col, (label, _, tooltip) in enumerate(self.header):
             item = QStandardItem(label)
             item.setToolTip(tooltip)
@@ -424,20 +427,18 @@ class OWAssociate(widget.OWWidget):
         table = self.table
         table.setHidden(True)
         table.setSortingEnabled(False)
-        proxy_model = self.proxy_model
-        proxy_model.setSourceModel(model)
-        table.setModel(proxy_model)
+
         for i in range(model.columnCount()):
             table.resizeColumnToContents(i)
         table.setSortingEnabled(True)
         table.setHidden(False)
-        self.table_rules = proxy_model.get_data()
+        self.table_rules = self.table.model().get_data()
         self.Outputs.rules.send(self.table_rules)
 
         self.button.setText('Find Rules')
 
         self.nRules = nRules
-        self.nFilteredRules = proxy_model.rowCount()  # TODO: continue; also add in owitemsets
+        self.nFilteredRules = model.rowCount()  # TODO: continue; also add in owitemsets
         if not self.nFilteredRules:
             self.Warning.filter_no_match()
         self.nSelectedRules = 0

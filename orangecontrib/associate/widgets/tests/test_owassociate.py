@@ -29,6 +29,8 @@ class TestOWAssociate(WidgetTest):
         self.widget.find_rules()
         output = self.get_output(self.widget.Outputs.rules)
         self.assertEqual(38, len(output))
+        self.assertEqual(38, self.widget.table.model().rowCount())
+        self.assertEqual(9, self.widget.table.model().columnCount())
 
         # filter by existing column
         self.widget.filterKeywordsAntecedent = match_filter
@@ -36,6 +38,8 @@ class TestOWAssociate(WidgetTest):
         self.widget.find_rules()
         output = self.get_output(self.widget.Outputs.rules)
         self.assertEqual(5, len(output))
+        self.assertEqual(5, self.widget.table.model().rowCount())
+        self.assertEqual(9, self.widget.table.model().columnCount())
 
         # filter by non-existing word
         self.widget.filterKeywordsAntecedent = no_match_filter
@@ -44,6 +48,7 @@ class TestOWAssociate(WidgetTest):
         self.assertTrue(self.widget.Warning.filter_no_match.is_shown())
         output = self.get_output(self.widget.Outputs.rules)
         self.assertIsNone(output)
+        self.assertEqual(0, self.widget.table.model().rowCount())
 
         # run again with defaults
         self.widget.filterKeywordsAntecedent = ""
