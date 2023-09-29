@@ -6,7 +6,7 @@ import numpy as np
 from scipy.sparse import issparse
 
 from AnyQt.QtCore import Qt, QItemSelection, QItemSelectionModel
-from AnyQt.QtWidgets import QTreeWidget, QTreeWidgetItem, qApp
+from AnyQt.QtWidgets import QTreeWidget, QTreeWidgetItem, QApplication
 
 from Orange.data import Table
 from Orange.widgets import widget, gui, settings
@@ -297,7 +297,7 @@ class OWItemsets(widget.OWWidget):
                 if not self._is_running or nItemsets >= self.maxItemsets:
                     break
 
-                qApp.processEvents()
+                QApplication.instance().processEvents()
 
         if not filterSearch:
             self.filter_change()

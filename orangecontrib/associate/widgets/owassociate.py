@@ -6,7 +6,7 @@ from scipy.sparse import issparse
 
 from AnyQt.QtCore import Qt, QSortFilterProxyModel
 from AnyQt.QtGui import QStandardItem, QStandardItemModel
-from AnyQt.QtWidgets import QTableView, qApp, QGridLayout, QLabel
+from AnyQt.QtWidgets import QTableView, QGridLayout, QLabel, QApplication
 
 from Orange.data import Table, ContinuousVariable, StringVariable, Domain
 from Orange.widgets import widget, gui, settings
@@ -415,7 +415,7 @@ class OWAssociate(widget.OWWidget):
                     if not self._is_running or nRules >= self.maxRules:
                         break
 
-                qApp.processEvents()
+                QApplication.instance().processEvents()
 
                 if not self._is_running or nRules >= self.maxRules:
                     break
