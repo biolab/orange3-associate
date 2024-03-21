@@ -4,17 +4,3 @@ requires = [
   'wheel',
 ]
 build-backend = 'setuptools.build_meta'
-
-[tool.cibuildwheel]
-# todo: skipping cp311 since _fpgrowth not compatible, fix it and then enalbe cp311
-skip = ["cp36-*", "cp37-*", "cp38-*", "cp311-*", "pp*", "*-musllinux_*"]
-build-verbosity = 2
-
-[tool.cibuildwheel.linux]
-archs = ["x86_64", "aarch64"]
-
-[tool.cibuildwheel.windows]
-archs = ["AMD64"]
-
-[tool.cibuildwheel.macos]
-archs = ["x86_64", "arm64"]
