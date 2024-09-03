@@ -94,7 +94,7 @@ jobs:
     steps:
       - name: Download bdist files
         id: download_artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4.1.7
         with:
           name: bdist_files
           path: ~/downloads
@@ -116,13 +116,13 @@ jobs:
 
     steps:
       - name: Download bdist files
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4.1.7
         with:
           name: bdist_files
           path: downloads/
 
       - name: Download sdist files
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4.1.7
         with:
           name: sdist_files
           path: downloads/
