@@ -90,13 +90,12 @@ class OWItemsets(widget.OWWidget):
             box, self, 'minSupport',
             values=self.support_options,
             label='Minimal support:', labelFormat="%g%%",
-            callback=lambda: self.find_itemsets())
+            callback=lambda: self.find_itemsets.deferred())
         gui.hSlider(box, self, 'maxItemsets', minValue=10000, maxValue=100000, step=10000,
                     label='Max. number of itemsets:', labelFormat="%d",
-                    callback=lambda: self.find_itemsets())
+                    callback=lambda: self.find_itemsets.deferred())
         self.button = gui.auto_commit(
-            box, self, 'autoFind', 'Find Itemsets', commit=self.find_itemsets,
-            callback=lambda: self.autoFind and self.find_itemsets())
+            box, self, 'autoFind', 'Find Itemsets', commit=self.find_itemsets)
 
         box = gui.widgetBox(self.controlArea, 'Filter itemsets')
         gui.lineEdit(box, self, 'filterKeywords', 'Contains:',
@@ -174,8 +173,9 @@ class OWItemsets(widget.OWWidget):
         self.nSelectedExamples = len(instances)
         self.nSelectedItemsets = nSelectedItemsets
         self.output = self.data[sorted(instances)] or None
-        self.commit()
+        self.commit.deferred()
 
+    @gui.deferred
     def commit(self):
         self.Outputs.matching_data.send(self.output)
 
@@ -214,8 +214,10 @@ class OWItemsets(widget.OWWidget):
                 self = self.parent()
             return '\n'.join(reversed(tooltip))
 
+    @gui.deferred
     def find_itemsets(self):
         if self.data is None or not len(self.data):
+            self.tree.clear()
             return
         if self._is_running:
             self._is_running = False
@@ -315,26 +317,22 @@ class OWItemsets(widget.OWWidget):
     @Inputs.data
     def set_data(self, data):
         self.data = data
-        is_error = False
+        self.output = None
+        self.X = None
+        self.Warning.cont_attrs.clear()
+        self.Error.no_disc_features.clear()
         if data is not None:
-            self.Warning.cont_attrs.clear()
-            self.Error.no_disc_features.clear()
-            self.button.setDisabled(False)
             self.X = data.X
             if issparse(data.X):
                 self.X = data.X.tocsc()
             else:
                 if not data.domain.has_discrete_attributes():
+                    self.data = self.X = None  # invalidate input
                     self.Error.no_disc_features()
-                    is_error = True
-                    self.button.setDisabled(True)
                 elif data.domain.has_continuous_attributes():
                     self.Warning.cont_attrs()
-        else:
-            self.output = None
-            self.commit()
-        if self.autoFind and not is_error:
-            self.find_itemsets()
+        self.find_itemsets.now()
+        self.commit.now()
 
     @classmethod
     def migrate_settings(cls, settings, _):
