@@ -5,7 +5,7 @@ from distutils.extension import Extension
 from Cython.Build import cythonize
 from os import path
 
-VERSION = '1.3.0'
+VERSION = '1.4.0'
 
 ENTRY_POINTS = {
     'orange3.addon': (
